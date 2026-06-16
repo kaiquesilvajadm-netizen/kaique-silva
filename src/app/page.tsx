@@ -25,6 +25,7 @@ type FuncaoId = (typeof FUNCOES)[number]['id']
 interface EstadoFuncao {
   metricasDaPlanilha: MetricaIndividual[]
   metricasManuais: MetricaIndividual[]
+  // Usado apenas na aba KING — em TAREFAS os dados já chegam individuais
   colaboradorSelecionado: string | null
   mostrarSeletor: boolean
   erro: string | null
@@ -49,27 +50,39 @@ export default function Home() {
 
   const estadoAtual = estadoPorFuncao[funcaoAtiva]
   const funcaoInfo = FUNCOES.find((funcao) => funcao.id === funcaoAtiva)!
+  const ehKing = funcaoAtiva === 'king'
 
-  // Nomes únicos extraídos da planilha (nunca gravados no código)
-  const todosColaboradores = useMemo(
+  // Nomes únicos para o modal — só relevante na aba KING
+  const todosColaboradoresKing = useMemo(
     () => [...new Set(estadoAtual.metricasDaPlanilha.map((m) => m.colaborador))].sort(),
     [estadoAtual.metricasDaPlanilha]
   )
 
-  // Somente os dados do colaborador selecionado são exibidos
   const linhasDashboard = useMemo(() => {
-    const filtradas = estadoAtual.colaboradorSelecionado
-      ? estadoAtual.metricasDaPlanilha.filter(
-          (m) => m.colaborador === estadoAtual.colaboradorSelecionado
-        )
-      : []
-    return montarRelatorio([...filtradas, ...estadoAtual.metricasManuais])
-  }, [estadoAtual])
+    let metricas: MetricaIndividual[]
 
-  const colaboradoresDisponiveis = estadoAtual.colaboradorSelecionado
-    ? [estadoAtual.colaboradorSelecionado]
-    : []
-  const metricasPermitidas = funcaoAtiva === 'tarefas' ? ROTULOS_PERMITEM_MANUAL_TAREFAS : []
+    if (ehKing) {
+      // KING: exibe somente o colaborador selecionado no modal
+      metricas = estadoAtual.colaboradorSelecionado
+        ? estadoAtual.metricasDaPlanilha.filter(
+            (m) => m.colaborador === estadoAtual.colaboradorSelecionado
+          )
+        : []
+    } else {
+      // TAREFAS: arquivo já é individual, exibe tudo direto
+      metricas = estadoAtual.metricasDaPlanilha
+    }
+
+    return montarRelatorio([...metricas, ...estadoAtual.metricasManuais])
+  }, [estadoAtual, ehKing])
+
+  const colaboradoresDisponiveis = ehKing
+    ? estadoAtual.colaboradorSelecionado
+      ? [estadoAtual.colaboradorSelecionado]
+      : []
+    : linhasDashboard.map((l) => l.colaborador)
+
+  const metricasPermitidas = ehKing ? [] : ROTULOS_PERMITEM_MANUAL_TAREFAS
 
   function atualizarFuncaoAtiva(parcial: Partial<EstadoFuncao>) {
     setEstadoPorFuncao((atual) => ({
@@ -81,15 +94,26 @@ export default function Home() {
   async function processarArquivoDaFuncaoAtiva(arquivo: File): Promise<MetricaIndividual[]> {
     const abas = await importarPlanilha(arquivo)
     const linhasPlanilha = limparTabela(abas[0]?.matriz ?? [], funcaoInfo.ancora)
-    return funcaoAtiva === 'tarefas' ? calcularMetricasTarefas(linhasPlanilha) : calcularMetricasKing(linhasPlanilha)
+    return ehKing ? calcularMetricasKing(linhasPlanilha) : calcularMetricasTarefas(linhasPlanilha)
   }
 
-  function selecionarColaborador(nome: string) {
-    atualizarFuncaoAtiva({
-      colaboradorSelecionado: nome,
-      mostrarSeletor: false,
-      metricasManuais: [],
-    })
+  function aoReceberResultado(metricas: MetricaIndividual[]) {
+    if (ehKing) {
+      // Filtra pela lista de autorizados e abre o modal de seleção
+      atualizarFuncaoAtiva({
+        metricasDaPlanilha: metricas.filter((m) => colaboradorAutorizado(m.colaborador)),
+        colaboradorSelecionado: null,
+        metricasManuais: [],
+        mostrarSeletor: true,
+      })
+    } else {
+      // TAREFAS: exibe direto, sem seleção
+      atualizarFuncaoAtiva({
+        metricasDaPlanilha: metricas,
+        metricasManuais: [],
+        mostrarSeletor: false,
+      })
+    }
   }
 
   return (
@@ -111,8 +135,8 @@ export default function Home() {
           </div>
           <hr className="border-slate-200" />
 
-          {/* Colaborador ativo + botão de troca */}
-          {estadoAtual.colaboradorSelecionado && (
+          {/* Banner de colaborador ativo — apenas na aba KING */}
+          {ehKing && estadoAtual.colaboradorSelecionado && (
             <div className="mt-5 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
               <span className="text-slate-400">👤</span>
               <span className="flex-1 text-sm font-medium text-slate-800">
@@ -131,14 +155,7 @@ export default function Home() {
           <div className="mt-6 grid gap-6 sm:grid-cols-2">
             <UploadPlanilha
               aoProcessar={processarArquivoDaFuncaoAtiva}
-              onResultado={(metricas) =>
-                atualizarFuncaoAtiva({
-                  metricasDaPlanilha: metricas.filter((m) => colaboradorAutorizado(m.colaborador)),
-                  colaboradorSelecionado: null,
-                  metricasManuais: [],
-                  mostrarSeletor: true,
-                })
-              }
+              onResultado={aoReceberResultado}
               onErro={(mensagem) => atualizarFuncaoAtiva({ erro: mensagem })}
             />
             <FormularioMetricasIndividuais
@@ -172,11 +189,13 @@ export default function Home() {
         </footer>
       </div>
 
-      {/* Modal de seleção — renderizado fora do card para cobrir tudo */}
-      {estadoAtual.mostrarSeletor && todosColaboradores.length > 0 && (
+      {/* Modal de seleção — apenas na aba KING */}
+      {ehKing && estadoAtual.mostrarSeletor && todosColaboradoresKing.length > 0 && (
         <ModalSelecionarColaborador
-          nomes={todosColaboradores}
-          onSelecionar={selecionarColaborador}
+          nomes={todosColaboradoresKing}
+          onSelecionar={(nome) =>
+            atualizarFuncaoAtiva({ colaboradorSelecionado: nome, mostrarSeletor: false, metricasManuais: [] })
+          }
         />
       )}
     </div>
