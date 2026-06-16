@@ -6,17 +6,20 @@ import UploadPlanilha from '@/components/UploadPlanilha'
 import FormularioMetricasIndividuais from '@/components/FormularioMetricasIndividuais'
 import DashboardMetricas from '@/components/DashboardMetricas'
 import { importarPlanilha } from '@/agents/importacao'
-import { limparLinhas } from '@/agents/limpeza'
+import { limparTabela } from '@/agents/limpeza'
 import { calcularMetricasTarefas } from '@/agents/metricas-tarefas'
 import { calcularMetricasKing } from '@/agents/metricas-king'
 import { montarRelatorio } from '@/agents/relatorio'
+import { ROTULOS_PERMITEM_MANUAL_TAREFAS } from '@/agents/dicionario-tarefas'
 import type { MetricaIndividual } from '@/types/metricas'
 
-// Duas planilhas de entrada diferentes, uma por aba:
-// KING -> Planilha King (churn) | TAREFAS -> Planilha de Tarefas (compromissos)
+// Duas planilhas de entrada diferentes, uma por aba, cada uma com sua
+// própria coluna-âncora usada para localizar o cabeçalho real:
+// KING -> Planilha King (churn), âncora "ID da conta"
+// TAREFAS -> Planilha de Tarefas (compromissos), âncora "Compromisso"
 const FUNCOES = [
-  { id: 'king', label: 'KING', icone: '⛏️', titulo: 'King', badge: 'Métricas · Planilha King (Churn)' },
-  { id: 'tarefas', label: 'TAREFAS', icone: '📊', titulo: 'Tarefas', badge: 'Métricas · Planilha de Tarefas' },
+  { id: 'king', label: 'KING', icone: '⛏️', titulo: 'King', badge: 'Métricas · Planilha King (Churn)', ancora: 'ID da conta' },
+  { id: 'tarefas', label: 'TAREFAS', icone: '📊', titulo: 'Tarefas', badge: 'Métricas · Planilha de Tarefas', ancora: 'Compromisso' },
 ] as const
 
 type FuncaoId = (typeof FUNCOES)[number]['id']
@@ -46,6 +49,9 @@ export default function Home() {
     [estadoAtual]
   )
 
+  const colaboradoresDisponiveis = linhasDashboard.map((linha) => linha.colaborador)
+  const metricasPermitidas = funcaoAtiva === 'tarefas' ? ROTULOS_PERMITEM_MANUAL_TAREFAS : []
+
   function atualizarFuncaoAtiva(parcial: Partial<EstadoFuncao>) {
     setEstadoPorFuncao((atual) => ({
       ...atual,
@@ -55,8 +61,8 @@ export default function Home() {
 
   async function processarArquivoDaFuncaoAtiva(arquivo: File): Promise<MetricaIndividual[]> {
     const abas = await importarPlanilha(arquivo)
-    const linhasLimpas = limparLinhas(abas.flatMap((aba) => aba.linhas))
-    return funcaoAtiva === 'tarefas' ? calcularMetricasTarefas(linhasLimpas) : calcularMetricasKing(linhasLimpas)
+    const linhasPlanilha = limparTabela(abas[0]?.matriz ?? [], funcaoInfo.ancora)
+    return funcaoAtiva === 'tarefas' ? calcularMetricasTarefas(linhasPlanilha) : calcularMetricasKing(linhasPlanilha)
   }
 
   return (
@@ -85,6 +91,9 @@ export default function Home() {
               onErro={(mensagem) => atualizarFuncaoAtiva({ erro: mensagem })}
             />
             <FormularioMetricasIndividuais
+              key={colaboradoresDisponiveis.join(',')}
+              colaboradoresDisponiveis={colaboradoresDisponiveis}
+              metricasPermitidas={metricasPermitidas}
               onAdicionar={(metrica) =>
                 atualizarFuncaoAtiva({ metricasManuais: [...estadoAtual.metricasManuais, metrica] })
               }

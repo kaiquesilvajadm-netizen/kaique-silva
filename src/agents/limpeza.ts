@@ -1,41 +1,47 @@
-import type { LinhaLimpa, LinhaPlanilha } from '@/types/metricas'
+import type { LinhaPlanilha } from '@/types/metricas'
+import { normalizarTexto } from './util-linhas'
 
-// Agente de Limpeza / Normalização
-// Recebe as linhas cruas extraídas da planilha e devolve linhas "limpas":
-// - remove linhas totalmente vazias
-// - retira espaços extras de textos
-// - converte textos numéricos (ex: "12", "3,5") em number
-// - normaliza valores ausentes para null
-export function limparLinhas(linhas: LinhaPlanilha[]): LinhaLimpa[] {
-  return linhas.map(limparLinha).filter((linha) => !linhaEstaVazia(linha))
-}
+// Agente de Limpeza
+// As planilhas reais exportadas pelo ADVBOX costumam ter lixo (texto de
+// menu da página, linha de "Total", paginação) antes ou depois da tabela de
+// verdade, e a tabela nem sempre começa na primeira linha. Este agente:
+// 1. Procura a linha de cabeçalho de verdade, pela presença de uma
+//    coluna-âncora conhecida (ex: "Compromisso" ou "ID da conta").
+// 2. Descarta linhas que não parecem dados reais (poucas células
+//    preenchidas — típico de linhas de total/paginação coladas da página).
+export function limparTabela(matriz: unknown[][], colunaAncora: string): LinhaPlanilha[] {
+  const colunaAncoraNormalizada = normalizarTexto(colunaAncora)
 
-function limparLinha(linha: LinhaPlanilha): LinhaLimpa {
-  const linhaLimpa: LinhaLimpa = {}
+  const indiceCabecalho = matriz.findIndex((linha) =>
+    linha.some((celula) => normalizarTexto(String(celula ?? '')) === colunaAncoraNormalizada)
+  )
 
-  for (const [coluna, valorOriginal] of Object.entries(linha)) {
-    linhaLimpa[coluna] = normalizarValor(valorOriginal)
+  if (indiceCabecalho === -1) {
+    throw new Error(
+      `Não encontramos a coluna "${colunaAncora}" nesta planilha. Confirme se o arquivo é o esperado para esta aba.`
+    )
   }
 
-  return linhaLimpa
+  const cabecalho = matriz[indiceCabecalho]
+  const colunas = cabecalho.map((celula, indice) => {
+    const nome = String(celula ?? '').trim()
+    return nome || `coluna_${indice + 1}`
+  })
+
+  return matriz
+    .slice(indiceCabecalho + 1)
+    .filter((linha) => celulasPreenchidas(linha) >= colunas.length / 2)
+    .map((linha) => paraObjeto(colunas, linha))
 }
 
-function normalizarValor(valor: unknown): string | number | null {
-  if (valor === null || valor === undefined) return null
-  if (typeof valor === 'number') return valor
-
-  const texto = String(valor).trim()
-  if (texto === '') return null
-
-  // Aceita vírgula como separador decimal (ex: "3,5" -> 3.5), comum em
-  // planilhas configuradas em pt-BR.
-  const textoComoNumero = texto.replace(',', '.')
-  const numero = Number(textoComoNumero)
-  const pareceNumero = !Number.isNaN(numero)
-
-  return pareceNumero ? numero : texto
+function celulasPreenchidas(linha: unknown[]): number {
+  return linha.filter((valor) => valor !== null && valor !== undefined && String(valor).trim() !== '').length
 }
 
-function linhaEstaVazia(linha: LinhaLimpa): boolean {
-  return Object.values(linha).every((valor) => valor === null || valor === '')
+function paraObjeto(colunas: string[], linha: unknown[]): LinhaPlanilha {
+  const objeto: LinhaPlanilha = {}
+  colunas.forEach((coluna, indice) => {
+    objeto[coluna] = linha[indice] ?? null
+  })
+  return objeto
 }

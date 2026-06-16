@@ -28,7 +28,8 @@ export default function UploadPlanilha({ aoProcessar, onResultado, onErro }: Pro
       onResultado(await aoProcessar(arquivo))
     } catch (erro) {
       console.error(erro)
-      onErro('Não foi possível ler essa planilha. Verifique se o arquivo é .xlsx, .xls ou .csv.')
+      const mensagem = erro instanceof Error ? erro.message : null
+      onErro(mensagem ?? 'Não foi possível ler essa planilha. Verifique se o arquivo é .xlsx, .xls ou .csv.')
     } finally {
       setProcessando(false)
     }

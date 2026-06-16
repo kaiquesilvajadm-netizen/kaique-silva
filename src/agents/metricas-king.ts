@@ -1,5 +1,5 @@
-import type { LinhaLimpa, MetricaIndividual } from '@/types/metricas'
-import { agruparPorColuna, extrairNumeroDaColuna, media, somar, COLUNA_COLABORADOR } from './util-linhas'
+import type { LinhaPlanilha, MetricaIndividual } from '@/types/metricas'
+import { agruparPorColuna, extrairNumeroDaColuna, media, somar, COLUNA_COLABORADOR_KING } from './util-linhas'
 
 const COLUNA_LIFETIME = 'lifetime'
 const COLUNA_LTV = 'ltv'
@@ -10,11 +10,11 @@ const COLUNA_VALOR_ASSINATURA = 'valor da assinatura'
 const LIFETIME_MINIMO_PARA_POS_7_PAGAMENTOS = 7
 
 // Agente de Métricas — Planilha King (churn)
-// Agrupa os registros de churn por colaborador e calcula as 5 métricas
-// financeiras da categoria Retenção & Churn descritas na planilha de
-// instruções.
-export function calcularMetricasKing(linhas: LinhaLimpa[]): MetricaIndividual[] {
-  const porColaborador = agruparPorColuna(linhas, COLUNA_COLABORADOR)
+// Agrupa os registros de churn por colaborador (coluna "Colaborador
+// (I.S.)") e calcula as 5 métricas financeiras da categoria Retenção &
+// Churn descritas na planilha de instruções.
+export function calcularMetricasKing(linhas: LinhaPlanilha[]): MetricaIndividual[] {
+  const porColaborador = agruparPorColuna(linhas, COLUNA_COLABORADOR_KING)
 
   return Array.from(porColaborador.entries()).map(([colaborador, linhasDoColaborador]) => {
     const lifetimes = numerosDaColuna(linhasDoColaborador, COLUNA_LIFETIME)
@@ -37,7 +37,7 @@ export function calcularMetricasKing(linhas: LinhaLimpa[]): MetricaIndividual[] 
   })
 }
 
-function numerosDaColuna(linhas: LinhaLimpa[], nomeColunaNormalizado: string): number[] {
+function numerosDaColuna(linhas: LinhaPlanilha[], nomeColunaNormalizado: string): number[] {
   return linhas
     .map((linha) => extrairNumeroDaColuna(linha, nomeColunaNormalizado))
     .filter((numero): numero is number => numero !== null)

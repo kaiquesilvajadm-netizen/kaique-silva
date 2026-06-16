@@ -1,5 +1,5 @@
-import type { LinhaLimpa, MetricaIndividual } from '@/types/metricas'
-import { agruparPorColuna, normalizarTexto, valorDaColuna, COLUNA_COLABORADOR } from './util-linhas'
+import type { LinhaPlanilha, MetricaIndividual } from '@/types/metricas'
+import { agruparPorColuna, normalizarTexto, valorDaColuna, COLUNA_COLABORADOR_TAREFAS } from './util-linhas'
 import {
   METRICAS_REUNIAO,
   METRICA_REMARCADAS,
@@ -13,11 +13,12 @@ import {
 const COLUNA_COMPROMISSO = 'compromisso'
 
 // Agente de Métricas — Planilha de Tarefas
-// Agrupa as linhas por colaborador e, para cada um, conta quantas vezes
-// cada "Compromisso" do dicionário aparece, depois calcula as métricas
-// derivadas (percentuais e totais) descritas na planilha de instruções.
-export function calcularMetricasTarefas(linhas: LinhaLimpa[]): MetricaIndividual[] {
-  const porColaborador = agruparPorColuna(linhas, COLUNA_COLABORADOR)
+// Agrupa as linhas por colaborador (coluna "Remetente") e, para cada um,
+// conta quantas vezes cada "Compromisso" do dicionário aparece, depois
+// calcula as métricas derivadas (percentuais e totais) descritas na
+// planilha de instruções.
+export function calcularMetricasTarefas(linhas: LinhaPlanilha[]): MetricaIndividual[] {
+  const porColaborador = agruparPorColuna(linhas, COLUNA_COLABORADOR_TAREFAS)
 
   return Array.from(porColaborador.entries()).map(([colaborador, linhasDoColaborador]) => {
     const contar = (definicao: DefinicaoMetricaContagem) =>
@@ -55,7 +56,7 @@ export function calcularMetricasTarefas(linhas: LinhaLimpa[]): MetricaIndividual
   })
 }
 
-function contarCompromissos(linhas: LinhaLimpa[], compromissosAceitos: string[]): number {
+function contarCompromissos(linhas: LinhaPlanilha[], compromissosAceitos: string[]): number {
   const aceitosNormalizados = compromissosAceitos.map(normalizarTexto)
 
   return linhas.filter((linha) => {

@@ -7,6 +7,10 @@ export interface DefinicaoMetricaContagem {
   rotulo: string
   icone: string
   compromissos: string[]
+  // Só true para a métrica que a planilha de instruções marca como
+  // aceitando ajuste manual ("DAR OPÇÃO DE INSERIR VALOR MANUAL"). O
+  // formulário de métricas individuais só oferece estas como opção.
+  permiteManual?: boolean
 }
 
 export const METRICAS_REUNIAO: DefinicaoMetricaContagem[] = [
@@ -125,6 +129,7 @@ export const METRICAS_OPORTUNIDADE: DefinicaoMetricaContagem[] = [
 export const METRICA_FECHAMENTOS: DefinicaoMetricaContagem = {
   rotulo: 'Fechamentos de Ops no Mês',
   icone: '💰',
+  permiteManual: true,
   compromissos: [
     'fechamento oportunidade pacote inteligente',
     'fechamento oportunidade Flowter',
@@ -150,3 +155,10 @@ export const METRICAS_CHURN_VIA_TAREFAS: DefinicaoMetricaContagem[] = [
     compromissos: ['Cs Resgate de Atrasados e Inadimplentes'],
   },
 ]
+
+// Rótulos das métricas que aceitam ajuste manual no menu Tarefas. Hoje a
+// planilha de instruções só marca "Fechamentos de Ops no Mês" — o menu King
+// não tem nenhuma métrica marcada para entrada manual.
+export const ROTULOS_PERMITEM_MANUAL_TAREFAS: string[] = [METRICA_FECHAMENTOS].filter(
+  (definicao) => definicao.permiteManual
+).map((definicao) => definicao.rotulo)
