@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CS Metrics",
-  description: "Análise de métricas individuais e da equipe",
+  title: "ADVBOX · Painel de métricas - Cultivação",
+  description: "Análise de métricas individuais e da equipe de Cultivação",
 };
 
 export default function RootLayout({

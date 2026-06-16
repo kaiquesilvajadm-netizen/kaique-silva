@@ -1,43 +1,84 @@
-import type { MetricaIndividual, OrigemMetrica } from '@/types/metricas'
+import type { MetricaIndividual } from '@/types/metricas'
+import {
+  METRICAS_REUNIAO,
+  METRICA_REMARCADAS,
+  METRICA_REVISOES_DE_CONTAS,
+  METRICAS_OPORTUNIDADE,
+  METRICA_FECHAMENTOS,
+  METRICAS_CHURN_VIA_TAREFAS,
+} from './dicionario-tarefas'
+
+export interface ValorMetrica {
+  rotulo: string
+  icone: string
+  valor: number
+}
+
+export interface LinhaDashboard {
+  colaborador: string
+  metricas: ValorMetrica[]
+}
+
+const ICONES_DERIVADOS: Record<string, string> = {
+  'Taxa de Cancelamento Reuniões (%)': '📉',
+  'Taxa de Conversão Ops (%)': '🎯',
+  'Nº Churns Registrados': '📉',
+  'RRM Churn Nominal (R$)': '💸',
+  'Life Time Médio dos Churns (meses)': '⏳',
+  'LTV Médio Perdido por Churn (R$)': '📊',
+  'Churns pós 7º Pagamento — LTV (R$)': '⏱️',
+}
+
+const ICONE_POR_ROTULO: Record<string, string> = {
+  ...Object.fromEntries(
+    [
+      ...METRICAS_REUNIAO,
+      METRICA_REMARCADAS,
+      METRICA_REVISOES_DE_CONTAS,
+      ...METRICAS_OPORTUNIDADE,
+      METRICA_FECHAMENTOS,
+      ...METRICAS_CHURN_VIA_TAREFAS,
+    ].map((definicao) => [definicao.rotulo, definicao.icone])
+  ),
+  ...ICONES_DERIVADOS,
+}
+
+function iconeDaMetrica(rotulo: string): string {
+  return ICONE_POR_ROTULO[rotulo] ?? '📌'
+}
 
 // Agente de Relatório
-// Junta as métricas vindas da planilha com as métricas preenchidas
-// manualmente e organiza tudo em uma linha por jogador/membro, pronta para
-// o dashboard.
-export interface LinhaDashboard {
-  jogador: string
-  valores: Record<string, number>
-  origens: OrigemMetrica[]
-}
-
+// Junta as métricas vindas da planilha com as preenchidas manualmente,
+// somando os valores quando o mesmo colaborador/métrica aparece em mais de
+// uma fonte (ex: "Fechamentos de Ops no Mês" pode ter um ajuste manual que
+// se soma à contagem automática da planilha, conforme pedido na planilha
+// de instruções).
 export function montarRelatorio(metricas: MetricaIndividual[]): LinhaDashboard[] {
-  const porJogador = new Map<string, LinhaDashboard>()
+  const valoresPorColaborador = new Map<string, Record<string, number>>()
 
   for (const metrica of metricas) {
-    const existente = porJogador.get(metrica.jogador)
+    const valoresAtuais = valoresPorColaborador.get(metrica.colaborador) ?? {}
 
-    if (!existente) {
-      porJogador.set(metrica.jogador, {
-        jogador: metrica.jogador,
-        valores: { ...metrica.valores },
-        origens: [metrica.origem],
-      })
-      continue
+    for (const [rotulo, valor] of Object.entries(metrica.valores)) {
+      valoresAtuais[rotulo] = (valoresAtuais[rotulo] ?? 0) + valor
     }
 
-    // Quando o mesmo jogador aparece em mais de uma fonte (planilha + manual),
-    // os valores preenchidos manualmente sobrescrevem os da planilha.
-    // TODO: revisar essa regra de prioridade quando soubermos como a equipe
-    // quer tratar conflitos entre as duas fontes.
-    existente.valores = { ...existente.valores, ...metrica.valores }
-    existente.origens.push(metrica.origem)
+    valoresPorColaborador.set(metrica.colaborador, valoresAtuais)
   }
 
-  return Array.from(porJogador.values())
+  return Array.from(valoresPorColaborador.entries()).map(([colaborador, valores]) => ({
+    colaborador,
+    metricas: Object.entries(valores).map(([rotulo, valor]) => ({
+      rotulo,
+      icone: iconeDaMetrica(rotulo),
+      valor,
+    })),
+  }))
 }
 
-export function colunasDeMetricas(linhas: LinhaDashboard[]): string[] {
-  const colunas = new Set<string>()
-  linhas.forEach((linha) => Object.keys(linha.valores).forEach((coluna) => colunas.add(coluna)))
-  return Array.from(colunas)
+export function formatarValorMetrica(rotulo: string, valor: number): string {
+  if (rotulo.includes('(%)')) return `${valor.toFixed(1)}%`
+  if (rotulo.includes('(R$)')) return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  if (rotulo.toLowerCase().includes('médio')) return valor.toFixed(1)
+  return String(Math.round(valor))
 }

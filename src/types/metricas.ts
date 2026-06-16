@@ -14,7 +14,7 @@ export type LinhaLimpa = Record<string, string | number | null>
 export type OrigemMetrica = 'planilha' | 'manual'
 
 export interface MetricaIndividual {
-  jogador: string
+  colaborador: string
   origem: OrigemMetrica
   valores: Record<string, number>
 }

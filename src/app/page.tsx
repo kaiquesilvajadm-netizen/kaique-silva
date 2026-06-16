@@ -1,42 +1,115 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Cabecalho from '@/components/Cabecalho'
 import UploadPlanilha from '@/components/UploadPlanilha'
 import FormularioMetricasIndividuais from '@/components/FormularioMetricasIndividuais'
 import DashboardMetricas from '@/components/DashboardMetricas'
+import { importarPlanilha } from '@/agents/importacao'
+import { limparLinhas } from '@/agents/limpeza'
+import { calcularMetricasTarefas } from '@/agents/metricas-tarefas'
+import { calcularMetricasKing } from '@/agents/metricas-king'
 import { montarRelatorio } from '@/agents/relatorio'
 import type { MetricaIndividual } from '@/types/metricas'
 
+// Duas planilhas de entrada diferentes, uma por aba:
+// KING -> Planilha King (churn) | TAREFAS -> Planilha de Tarefas (compromissos)
+const FUNCOES = [
+  { id: 'king', label: 'KING', icone: '⛏️', titulo: 'King', badge: 'Métricas · Planilha King (Churn)' },
+  { id: 'tarefas', label: 'TAREFAS', icone: '📊', titulo: 'Tarefas', badge: 'Métricas · Planilha de Tarefas' },
+] as const
+
+type FuncaoId = (typeof FUNCOES)[number]['id']
+
+interface EstadoFuncao {
+  metricasDaPlanilha: MetricaIndividual[]
+  metricasManuais: MetricaIndividual[]
+  erro: string | null
+}
+
+function estadoFuncaoVazio(): EstadoFuncao {
+  return { metricasDaPlanilha: [], metricasManuais: [], erro: null }
+}
+
 export default function Home() {
-  const [metricasDaPlanilha, setMetricasDaPlanilha] = useState<MetricaIndividual[]>([])
-  const [metricasManuais, setMetricasManuais] = useState<MetricaIndividual[]>([])
-  const [erro, setErro] = useState<string | null>(null)
+  const [funcaoAtiva, setFuncaoAtiva] = useState<FuncaoId>('king')
+  const [estadoPorFuncao, setEstadoPorFuncao] = useState<Record<FuncaoId, EstadoFuncao>>({
+    king: estadoFuncaoVazio(),
+    tarefas: estadoFuncaoVazio(),
+  })
+
+  const estadoAtual = estadoPorFuncao[funcaoAtiva]
+  const funcaoInfo = FUNCOES.find((funcao) => funcao.id === funcaoAtiva)!
 
   const linhasDashboard = useMemo(
-    () => montarRelatorio([...metricasDaPlanilha, ...metricasManuais]),
-    [metricasDaPlanilha, metricasManuais]
+    () => montarRelatorio([...estadoAtual.metricasDaPlanilha, ...estadoAtual.metricasManuais]),
+    [estadoAtual]
   )
 
+  function atualizarFuncaoAtiva(parcial: Partial<EstadoFuncao>) {
+    setEstadoPorFuncao((atual) => ({
+      ...atual,
+      [funcaoAtiva]: { ...atual[funcaoAtiva], ...parcial },
+    }))
+  }
+
+  async function processarArquivoDaFuncaoAtiva(arquivo: File): Promise<MetricaIndividual[]> {
+    const abas = await importarPlanilha(arquivo)
+    const linhasLimpas = limparLinhas(abas.flatMap((aba) => aba.linhas))
+    return funcaoAtiva === 'tarefas' ? calcularMetricasTarefas(linhasLimpas) : calcularMetricasKing(linhasLimpas)
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-50 px-6 py-10">
+    <div className="min-h-screen bg-gradient-to-b from-slate-100 to-blue-50 px-6 py-10">
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
-        <header>
-          <h1 className="text-3xl font-semibold text-zinc-900">CS Metrics</h1>
-          <p className="mt-1 text-zinc-600">
-            Análise de métricas da equipe: envie a planilha e/ou preencha métricas individuais.
-          </p>
-        </header>
+        <Cabecalho
+          funcaoAtiva={funcaoAtiva}
+          funcoes={FUNCOES}
+          onMudarFuncao={(id) => setFuncaoAtiva(id as FuncaoId)}
+        />
 
-        <section className="grid gap-6 sm:grid-cols-2">
-          <UploadPlanilha onImportar={setMetricasDaPlanilha} onErro={setErro} />
-          <FormularioMetricasIndividuais
-            onAdicionar={(metrica) => setMetricasManuais((atuais) => [...atuais, metrica])}
-          />
-        </section>
+        <div key={funcaoAtiva} className="rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3 pb-4">
+            <span className="text-xl">{funcaoInfo.icone}</span>
+            <h2 className="text-lg font-semibold text-slate-900">{funcaoInfo.titulo}</h2>
+            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+              {funcaoInfo.badge}
+            </span>
+          </div>
+          <hr className="border-slate-200" />
 
-        {erro && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>}
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            <UploadPlanilha
+              aoProcessar={processarArquivoDaFuncaoAtiva}
+              onResultado={(metricas) => atualizarFuncaoAtiva({ metricasDaPlanilha: metricas })}
+              onErro={(mensagem) => atualizarFuncaoAtiva({ erro: mensagem })}
+            />
+            <FormularioMetricasIndividuais
+              onAdicionar={(metrica) =>
+                atualizarFuncaoAtiva({ metricasManuais: [...estadoAtual.metricasManuais, metrica] })
+              }
+            />
+          </div>
 
-        <DashboardMetricas linhas={linhasDashboard} />
+          {estadoAtual.erro && (
+            <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{estadoAtual.erro}</p>
+          )}
+
+          {linhasDashboard.length > 0 && (
+            <span className="mt-6 inline-block rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+              📋 RELATÓRIO {funcaoInfo.label}
+            </span>
+          )}
+
+          <div className="mt-4">
+            <DashboardMetricas linhas={linhasDashboard} />
+          </div>
+        </div>
+
+        <footer className="text-center text-xs text-slate-400">
+          <p>ADVBOX · Painel de métricas - CULTIVAÇÃO</p>
+          <p>Desenvolvido por: Time de Configuração</p>
+        </footer>
       </div>
     </div>
   )

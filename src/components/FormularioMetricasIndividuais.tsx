@@ -15,10 +15,10 @@ interface Props {
 const PAR_VAZIO: ParMetrica = { nome: '', valor: '' }
 
 export default function FormularioMetricasIndividuais({ onAdicionar }: Props) {
-  const [jogador, setJogador] = useState('')
-  // Campos livres por enquanto: quando a planilha de instruções chegar, dá
-  // pra trocar isso por campos fixos com os nomes reais das métricas
-  // individuais da equipe (ex: "vitórias", "presença", "nota técnica"...).
+  const [colaborador, setColaborador] = useState('')
+  // Campos livres: o valor digitado aqui é somado ao valor da planilha
+  // quando o rótulo da métrica bate com um dos rótulos do dicionário (ex:
+  // "Fechamentos de Ops no Mês"), conforme pedido na planilha de instruções.
   const [pares, setPares] = useState<ParMetrica[]>([PAR_VAZIO])
 
   function atualizarPar(indice: number, campo: keyof ParMetrica, valor: string) {
@@ -35,7 +35,7 @@ export default function FormularioMetricasIndividuais({ onAdicionar }: Props) {
 
   function handleSubmit(evento: React.FormEvent) {
     evento.preventDefault()
-    if (!jogador.trim()) return
+    if (!colaborador.trim()) return
 
     const valores: Record<string, number> = {}
     for (const par of pares) {
@@ -45,21 +45,21 @@ export default function FormularioMetricasIndividuais({ onAdicionar }: Props) {
       }
     }
 
-    onAdicionar({ jogador: jogador.trim(), origem: 'manual', valores })
-    setJogador('')
+    onAdicionar({ colaborador: colaborador.trim(), origem: 'manual', valores })
+    setColaborador('')
     setPares([PAR_VAZIO])
   }
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border border-zinc-200 bg-white p-6">
       <h2 className="text-lg font-medium text-zinc-900">Métricas individuais</h2>
-      <p className="mt-1 text-sm text-zinc-500">Preencha manualmente as métricas de um jogador/membro.</p>
+      <p className="mt-1 text-sm text-zinc-500">Preencha manualmente as métricas de um colaborador.</p>
 
       <div className="mt-4 flex flex-col gap-3">
         <input
-          value={jogador}
-          onChange={(evento) => setJogador(evento.target.value)}
-          placeholder="Nome do jogador"
+          value={colaborador}
+          onChange={(evento) => setColaborador(evento.target.value)}
+          placeholder="Nome do colaborador"
           className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
           required
         />
