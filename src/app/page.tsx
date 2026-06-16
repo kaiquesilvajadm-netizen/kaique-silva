@@ -5,6 +5,7 @@ import Cabecalho from '@/components/Cabecalho'
 import UploadPlanilha from '@/components/UploadPlanilha'
 import FormularioMetricasIndividuais from '@/components/FormularioMetricasIndividuais'
 import DashboardMetricas from '@/components/DashboardMetricas'
+import ModalSelecionarColaborador from '@/components/ModalSelecionarColaborador'
 import { importarPlanilha } from '@/agents/importacao'
 import { limparTabela } from '@/agents/limpeza'
 import { calcularMetricasTarefas } from '@/agents/metricas-tarefas'
@@ -13,10 +14,6 @@ import { montarRelatorio } from '@/agents/relatorio'
 import { ROTULOS_PERMITEM_MANUAL_TAREFAS } from '@/agents/dicionario-tarefas'
 import type { MetricaIndividual } from '@/types/metricas'
 
-// Duas planilhas de entrada diferentes, uma por aba, cada uma com sua
-// própria coluna-âncora usada para localizar o cabeçalho real:
-// KING -> Planilha King (churn), âncora "ID da conta"
-// TAREFAS -> Planilha de Tarefas (compromissos), âncora "Compromisso"
 const FUNCOES = [
   { id: 'king', label: 'KING', icone: '⛏️', titulo: 'King', badge: 'Métricas · Planilha King (Churn)', ancora: 'ID da conta' },
   { id: 'tarefas', label: 'TAREFAS', icone: '📊', titulo: 'Tarefas', badge: 'Métricas · Planilha de Tarefas', ancora: 'Compromisso' },
@@ -27,11 +24,19 @@ type FuncaoId = (typeof FUNCOES)[number]['id']
 interface EstadoFuncao {
   metricasDaPlanilha: MetricaIndividual[]
   metricasManuais: MetricaIndividual[]
+  colaboradorSelecionado: string | null
+  mostrarSeletor: boolean
   erro: string | null
 }
 
 function estadoFuncaoVazio(): EstadoFuncao {
-  return { metricasDaPlanilha: [], metricasManuais: [], erro: null }
+  return {
+    metricasDaPlanilha: [],
+    metricasManuais: [],
+    colaboradorSelecionado: null,
+    mostrarSeletor: false,
+    erro: null,
+  }
 }
 
 export default function Home() {
@@ -44,12 +49,25 @@ export default function Home() {
   const estadoAtual = estadoPorFuncao[funcaoAtiva]
   const funcaoInfo = FUNCOES.find((funcao) => funcao.id === funcaoAtiva)!
 
-  const linhasDashboard = useMemo(
-    () => montarRelatorio([...estadoAtual.metricasDaPlanilha, ...estadoAtual.metricasManuais]),
-    [estadoAtual]
+  // Nomes únicos extraídos da planilha (nunca gravados no código)
+  const todosColaboradores = useMemo(
+    () => [...new Set(estadoAtual.metricasDaPlanilha.map((m) => m.colaborador))].sort(),
+    [estadoAtual.metricasDaPlanilha]
   )
 
-  const colaboradoresDisponiveis = linhasDashboard.map((linha) => linha.colaborador)
+  // Somente os dados do colaborador selecionado são exibidos
+  const linhasDashboard = useMemo(() => {
+    const filtradas = estadoAtual.colaboradorSelecionado
+      ? estadoAtual.metricasDaPlanilha.filter(
+          (m) => m.colaborador === estadoAtual.colaboradorSelecionado
+        )
+      : []
+    return montarRelatorio([...filtradas, ...estadoAtual.metricasManuais])
+  }, [estadoAtual])
+
+  const colaboradoresDisponiveis = estadoAtual.colaboradorSelecionado
+    ? [estadoAtual.colaboradorSelecionado]
+    : []
   const metricasPermitidas = funcaoAtiva === 'tarefas' ? ROTULOS_PERMITEM_MANUAL_TAREFAS : []
 
   function atualizarFuncaoAtiva(parcial: Partial<EstadoFuncao>) {
@@ -63,6 +81,14 @@ export default function Home() {
     const abas = await importarPlanilha(arquivo)
     const linhasPlanilha = limparTabela(abas[0]?.matriz ?? [], funcaoInfo.ancora)
     return funcaoAtiva === 'tarefas' ? calcularMetricasTarefas(linhasPlanilha) : calcularMetricasKing(linhasPlanilha)
+  }
+
+  function selecionarColaborador(nome: string) {
+    atualizarFuncaoAtiva({
+      colaboradorSelecionado: nome,
+      mostrarSeletor: false,
+      metricasManuais: [],
+    })
   }
 
   return (
@@ -84,10 +110,34 @@ export default function Home() {
           </div>
           <hr className="border-slate-200" />
 
+          {/* Colaborador ativo + botão de troca */}
+          {estadoAtual.colaboradorSelecionado && (
+            <div className="mt-5 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+              <span className="text-slate-400">👤</span>
+              <span className="flex-1 text-sm font-medium text-slate-800">
+                {estadoAtual.colaboradorSelecionado}
+              </span>
+              <button
+                type="button"
+                onClick={() => atualizarFuncaoAtiva({ mostrarSeletor: true })}
+                className="rounded-full bg-white px-3 py-1 text-xs font-medium text-blue-600 shadow-sm ring-1 ring-slate-200 hover:bg-blue-50"
+              >
+                Trocar
+              </button>
+            </div>
+          )}
+
           <div className="mt-6 grid gap-6 sm:grid-cols-2">
             <UploadPlanilha
               aoProcessar={processarArquivoDaFuncaoAtiva}
-              onResultado={(metricas) => atualizarFuncaoAtiva({ metricasDaPlanilha: metricas })}
+              onResultado={(metricas) =>
+                atualizarFuncaoAtiva({
+                  metricasDaPlanilha: metricas,
+                  colaboradorSelecionado: null,
+                  metricasManuais: [],
+                  mostrarSeletor: true,
+                })
+              }
               onErro={(mensagem) => atualizarFuncaoAtiva({ erro: mensagem })}
             />
             <FormularioMetricasIndividuais
@@ -120,6 +170,14 @@ export default function Home() {
           <p>Desenvolvido por: Time de Configuração</p>
         </footer>
       </div>
+
+      {/* Modal de seleção — renderizado fora do card para cobrir tudo */}
+      {estadoAtual.mostrarSeletor && todosColaboradores.length > 0 && (
+        <ModalSelecionarColaborador
+          nomes={todosColaboradores}
+          onSelecionar={selecionarColaborador}
+        />
+      )}
     </div>
   )
 }
