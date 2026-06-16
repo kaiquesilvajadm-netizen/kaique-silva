@@ -12,6 +12,7 @@ import { calcularMetricasTarefas } from '@/agents/metricas-tarefas'
 import { calcularMetricasKing } from '@/agents/metricas-king'
 import { montarRelatorio } from '@/agents/relatorio'
 import { ROTULOS_PERMITEM_MANUAL_TAREFAS } from '@/agents/dicionario-tarefas'
+import { colaboradorAutorizado } from '@/agents/colaboradores-autorizados'
 import type { MetricaIndividual } from '@/types/metricas'
 
 const FUNCOES = [
@@ -132,7 +133,7 @@ export default function Home() {
               aoProcessar={processarArquivoDaFuncaoAtiva}
               onResultado={(metricas) =>
                 atualizarFuncaoAtiva({
-                  metricasDaPlanilha: metricas,
+                  metricasDaPlanilha: metricas.filter((m) => colaboradorAutorizado(m.colaborador)),
                   colaboradorSelecionado: null,
                   metricasManuais: [],
                   mostrarSeletor: true,
