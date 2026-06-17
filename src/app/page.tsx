@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Cabecalho from '@/components/Cabecalho'
 import UploadPlanilha from '@/components/UploadPlanilha'
 import FormularioMetricasIndividuais from '@/components/FormularioMetricasIndividuais'
@@ -13,109 +13,112 @@ import { calcularMetricasKing } from '@/agents/metricas-king'
 import { montarRelatorio } from '@/agents/relatorio'
 import { ROTULOS_PERMITEM_MANUAL_TAREFAS } from '@/agents/dicionario-tarefas'
 import { colaboradorAutorizado, normalizarNomeColaborador } from '@/agents/colaboradores-autorizados'
-import type { MetricaIndividual } from '@/types/metricas'
+import type { LinhaPlanilha, MetricaIndividual } from '@/types/metricas'
 
 const FUNCOES = [
-  { id: 'king', label: 'KING', icone: '⛏️', titulo: 'King', badge: 'Métricas · Planilha King (Churn)', ancora: 'ID da conta' },
-  { id: 'tarefas', label: 'TAREFAS', icone: '📊', titulo: 'Tarefas', badge: 'Métricas · Planilha de Tarefas', ancora: 'Compromisso' },
+  { id: 'king', label: 'KING', icone: '⛏️', titulo: 'King', badge: 'Métricas · Planilha King (Churn)' },
+  { id: 'tarefas', label: 'TAREFAS', icone: '📊', titulo: 'Tarefas', badge: 'Métricas · Planilha de Tarefas' },
 ] as const
 
 type FuncaoId = (typeof FUNCOES)[number]['id']
+type ModoTarefas = 'mensal' | 'semanal'
 
-interface EstadoFuncao {
+// ── Estado KING ──────────────────────────────────────────────────────────────
+interface EstadoKing {
   metricasDaPlanilha: MetricaIndividual[]
   metricasManuais: MetricaIndividual[]
-  // Usado apenas na aba KING — em TAREFAS os dados já chegam individuais
   colaboradorSelecionado: string | null
   mostrarSeletor: boolean
   erro: string | null
 }
 
-function estadoFuncaoVazio(): EstadoFuncao {
-  return {
-    metricasDaPlanilha: [],
-    metricasManuais: [],
-    colaboradorSelecionado: null,
-    mostrarSeletor: false,
-    erro: null,
-  }
+function kingVazio(): EstadoKing {
+  return { metricasDaPlanilha: [], metricasManuais: [], colaboradorSelecionado: null, mostrarSeletor: false, erro: null }
+}
+
+// ── Estado TAREFAS ────────────────────────────────────────────────────────────
+interface EstadoTarefas {
+  metricasDaPlanilha: MetricaIndividual[]
+  metricasManuais: MetricaIndividual[]
+  modo: ModoTarefas
+  erro: string | null
+}
+
+function tarefasVazio(): EstadoTarefas {
+  return { metricasDaPlanilha: [], metricasManuais: [], modo: 'mensal', erro: null }
 }
 
 export default function Home() {
   const [funcaoAtiva, setFuncaoAtiva] = useState<FuncaoId>('king')
-  const [estadoPorFuncao, setEstadoPorFuncao] = useState<Record<FuncaoId, EstadoFuncao>>({
-    king: estadoFuncaoVazio(),
-    tarefas: estadoFuncaoVazio(),
-  })
+  const [king, setKing] = useState<EstadoKing>(kingVazio)
+  const [tarefas, setTarefas] = useState<EstadoTarefas>(tarefasVazio)
 
-  const estadoAtual = estadoPorFuncao[funcaoAtiva]
-  const funcaoInfo = FUNCOES.find((funcao) => funcao.id === funcaoAtiva)!
+  // Armazena as linhas brutas da última planilha de tarefas para reprocessar
+  // ao trocar de modo (MENSAL ↔ SEMANAL) sem precisar reenviar o arquivo.
+  const linhasBrutasTarefas = useRef<LinhaPlanilha[]>([])
+
+  const funcaoInfo = FUNCOES.find((f) => f.id === funcaoAtiva)!
   const ehKing = funcaoAtiva === 'king'
 
-  // Nomes únicos para o modal — só relevante na aba KING
+  // ── Dashboard KING ──────────────────────────────────────────────────────────
+  const linhasKing = useMemo(() => {
+    const filtradas = king.colaboradorSelecionado
+      ? king.metricasDaPlanilha.filter((m) => m.colaborador === king.colaboradorSelecionado)
+      : []
+    return montarRelatorio([...filtradas, ...king.metricasManuais])
+  }, [king])
+
   const todosColaboradoresKing = useMemo(
-    () => [...new Set(estadoAtual.metricasDaPlanilha.map((m) => m.colaborador))].sort(),
-    [estadoAtual.metricasDaPlanilha]
+    () => [...new Set(king.metricasDaPlanilha.map((m) => m.colaborador))].sort(),
+    [king.metricasDaPlanilha]
   )
 
-  const linhasDashboard = useMemo(() => {
-    let metricas: MetricaIndividual[]
+  // ── Dashboard TAREFAS ───────────────────────────────────────────────────────
+  const linhasTarefas = useMemo(
+    () => montarRelatorio([...tarefas.metricasDaPlanilha, ...tarefas.metricasManuais]),
+    [tarefas]
+  )
 
-    if (ehKing) {
-      // KING: exibe somente o colaborador selecionado no modal
-      metricas = estadoAtual.colaboradorSelecionado
-        ? estadoAtual.metricasDaPlanilha.filter(
-            (m) => m.colaborador === estadoAtual.colaboradorSelecionado
-          )
-        : []
-    } else {
-      // TAREFAS: arquivo já é individual, exibe tudo direto
-      metricas = estadoAtual.metricasDaPlanilha
-    }
+  const colaboradoresTarefas = linhasTarefas.map((l) => l.colaborador)
 
-    return montarRelatorio([...metricas, ...estadoAtual.metricasManuais])
-  }, [estadoAtual, ehKing])
+  // ── Processamento ───────────────────────────────────────────────────────────
+  async function processarArquivoKing(arquivo: File): Promise<MetricaIndividual[]> {
+    const abas = await importarPlanilha(arquivo)
+    return calcularMetricasKing(limparTabela(abas[0]?.matriz ?? [], 'ID da conta'))
+  }
 
-  const colaboradoresDisponiveis = ehKing
-    ? estadoAtual.colaboradorSelecionado
-      ? [estadoAtual.colaboradorSelecionado]
-      : []
-    : linhasDashboard.map((l) => l.colaborador)
+  async function processarArquivoTarefas(arquivo: File): Promise<MetricaIndividual[]> {
+    const abas = await importarPlanilha(arquivo)
+    const linhas = limparTabela(abas[0]?.matriz ?? [], 'Compromisso')
+    linhasBrutasTarefas.current = linhas
+    return calcularMetricasTarefas(linhas, tarefas.modo)
+  }
 
-  const metricasPermitidas = ehKing ? [] : ROTULOS_PERMITEM_MANUAL_TAREFAS
-
-  function atualizarFuncaoAtiva(parcial: Partial<EstadoFuncao>) {
-    setEstadoPorFuncao((atual) => ({
-      ...atual,
-      [funcaoAtiva]: { ...atual[funcaoAtiva], ...parcial },
+  function aoReceberKing(metricas: MetricaIndividual[]) {
+    setKing((prev) => ({
+      ...prev,
+      metricasDaPlanilha: metricas
+        .filter((m) => colaboradorAutorizado(m.colaborador))
+        .map((m) => ({ ...m, colaborador: normalizarNomeColaborador(m.colaborador) })),
+      colaboradorSelecionado: null,
+      metricasManuais: [],
+      mostrarSeletor: true,
+      erro: null,
     }))
   }
 
-  async function processarArquivoDaFuncaoAtiva(arquivo: File): Promise<MetricaIndividual[]> {
-    const abas = await importarPlanilha(arquivo)
-    const linhasPlanilha = limparTabela(abas[0]?.matriz ?? [], funcaoInfo.ancora)
-    return ehKing ? calcularMetricasKing(linhasPlanilha) : calcularMetricasTarefas(linhasPlanilha)
+  function aoReceberTarefas(metricas: MetricaIndividual[]) {
+    setTarefas((prev) => ({ ...prev, metricasDaPlanilha: metricas, metricasManuais: [], erro: null }))
   }
 
-  function aoReceberResultado(metricas: MetricaIndividual[]) {
-    if (ehKing) {
-      // Filtra pela lista de autorizados e abre o modal de seleção
-      atualizarFuncaoAtiva({
-        metricasDaPlanilha: metricas
-          .filter((m) => colaboradorAutorizado(m.colaborador))
-          .map((m) => ({ ...m, colaborador: normalizarNomeColaborador(m.colaborador) })),
-        colaboradorSelecionado: null,
-        metricasManuais: [],
-        mostrarSeletor: true,
-      })
-    } else {
-      // TAREFAS: exibe direto, sem seleção
-      atualizarFuncaoAtiva({
-        metricasDaPlanilha: metricas,
-        metricasManuais: [],
-        mostrarSeletor: false,
-      })
-    }
+  function mudarModoTarefas(novoModo: ModoTarefas) {
+    const linhas = linhasBrutasTarefas.current
+    setTarefas((prev) => ({
+      ...prev,
+      modo: novoModo,
+      metricasManuais: [],
+      metricasDaPlanilha: linhas.length > 0 ? calcularMetricasTarefas(linhas, novoModo) : [],
+    }))
   }
 
   return (
@@ -127,75 +130,134 @@ export default function Home() {
           onMudarFuncao={(id) => setFuncaoAtiva(id as FuncaoId)}
         />
 
-        <div key={funcaoAtiva} className="rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-center gap-3 pb-4">
-            <span className="text-xl">{funcaoInfo.icone}</span>
-            <h2 className="text-lg font-semibold text-slate-900">{funcaoInfo.titulo}</h2>
-            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
-              {funcaoInfo.badge}
-            </span>
-          </div>
-          <hr className="border-slate-200" />
-
-          {/* Banner de colaborador ativo — apenas na aba KING */}
-          {ehKing && estadoAtual.colaboradorSelecionado && (
-            <div className="mt-5 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
-              <span className="text-slate-400">👤</span>
-              <span className="flex-1 text-sm font-medium text-slate-800">
-                {estadoAtual.colaboradorSelecionado}
+        {/* ── ABA KING ─────────────────────────────────────────────────── */}
+        {ehKing && (
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3 pb-4">
+              <span className="text-xl">{funcaoInfo.icone}</span>
+              <h2 className="text-lg font-semibold text-slate-900">{funcaoInfo.titulo}</h2>
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+                {funcaoInfo.badge}
               </span>
-              <button
-                type="button"
-                onClick={() => atualizarFuncaoAtiva({ mostrarSeletor: true })}
-                className="rounded-full bg-white px-3 py-1 text-xs font-medium text-blue-600 shadow-sm ring-1 ring-slate-200 hover:bg-blue-50"
-              >
-                Trocar
-              </button>
             </div>
-          )}
+            <hr className="border-slate-200" />
 
-          <div className="mt-6 grid gap-6 sm:grid-cols-2">
-            <UploadPlanilha
-              aoProcessar={processarArquivoDaFuncaoAtiva}
-              onResultado={aoReceberResultado}
-              onErro={(mensagem) => atualizarFuncaoAtiva({ erro: mensagem })}
-            />
-            <FormularioMetricasIndividuais
-              key={colaboradoresDisponiveis.join(',')}
-              colaboradoresDisponiveis={colaboradoresDisponiveis}
-              metricasPermitidas={metricasPermitidas}
-              onAdicionar={(metrica) =>
-                atualizarFuncaoAtiva({ metricasManuais: [...estadoAtual.metricasManuais, metrica] })
-              }
-            />
+            {king.colaboradorSelecionado && (
+              <div className="mt-5 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+                <span className="text-slate-400">👤</span>
+                <span className="flex-1 text-sm font-medium text-slate-800">
+                  {king.colaboradorSelecionado}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setKing((prev) => ({ ...prev, mostrarSeletor: true }))}
+                  className="rounded-full bg-white px-3 py-1 text-xs font-medium text-blue-600 shadow-sm ring-1 ring-slate-200 hover:bg-blue-50"
+                >
+                  Trocar
+                </button>
+              </div>
+            )}
+
+            <div className="mt-6">
+              <UploadPlanilha
+                aoProcessar={processarArquivoKing}
+                onResultado={aoReceberKing}
+                onErro={(msg) => setKing((prev) => ({ ...prev, erro: msg }))}
+              />
+            </div>
+
+            {king.erro && (
+              <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{king.erro}</p>
+            )}
+
+            {linhasKing.length > 0 && (
+              <span className="mt-6 inline-block rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                📋 RELATÓRIO KING
+              </span>
+            )}
+            <div className="mt-4">
+              <DashboardMetricas linhas={linhasKing} ocultarNome={false} />
+            </div>
           </div>
+        )}
 
-          {estadoAtual.erro && (
-            <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{estadoAtual.erro}</p>
-          )}
+        {/* ── ABA TAREFAS ──────────────────────────────────────────────── */}
+        {!ehKing && (
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-xl">{funcaoInfo.icone}</span>
+                <h2 className="text-lg font-semibold text-slate-900">{funcaoInfo.titulo}</h2>
+                <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+                  {funcaoInfo.badge}
+                </span>
+              </div>
 
-          {linhasDashboard.length > 0 && (
-            <span className="mt-6 inline-block rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
-              📋 RELATÓRIO {funcaoInfo.label}
-            </span>
-          )}
+              {/* Toggle MENSAL / SEMANAL */}
+              <div className="flex gap-1 rounded-full bg-slate-100 p-1">
+                {(['mensal', 'semanal'] as ModoTarefas[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => mudarModoTarefas(m)}
+                    className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                      tarefas.modo === m
+                        ? 'bg-slate-900 text-white'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    {m === 'mensal' ? 'Mensal' : 'Semanal'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <hr className="border-slate-200" />
 
-          <div className="mt-4">
-            <DashboardMetricas linhas={linhasDashboard} ocultarNome={!ehKing} />
+            <div className="mt-6 grid gap-6 sm:grid-cols-2">
+              <UploadPlanilha
+                aoProcessar={processarArquivoTarefas}
+                onResultado={aoReceberTarefas}
+                onErro={(msg) => setTarefas((prev) => ({ ...prev, erro: msg }))}
+              />
+              <FormularioMetricasIndividuais
+                key={colaboradoresTarefas.join(',')}
+                colaboradoresDisponiveis={colaboradoresTarefas}
+                metricasPermitidas={ROTULOS_PERMITEM_MANUAL_TAREFAS}
+                onAdicionar={(m) =>
+                  setTarefas((prev) => ({ ...prev, metricasManuais: [...prev.metricasManuais, m] }))
+                }
+              />
+            </div>
+
+            {tarefas.erro && (
+              <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{tarefas.erro}</p>
+            )}
+
+            {linhasTarefas.length > 0 && (
+              <span className="mt-6 inline-block rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                📋 RELATÓRIO TAREFAS · {tarefas.modo === 'mensal' ? 'MENSAL' : 'SEMANAL'}
+              </span>
+            )}
+            <div className="mt-4">
+              <DashboardMetricas
+                linhas={linhasTarefas}
+                ocultarNome={tarefas.modo === 'mensal'}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <footer className="text-center text-xs text-slate-400">
           <p>ADVBOX · PAINEL DE MÉTRICAS - CULTIVAÇÃO</p>
         </footer>
       </div>
 
-      {/* Modal de seleção — apenas na aba KING */}
-      {ehKing && estadoAtual.mostrarSeletor && todosColaboradoresKing.length > 0 && (
+      {/* Modal de seleção de colaborador — apenas na aba KING */}
+      {ehKing && king.mostrarSeletor && todosColaboradoresKing.length > 0 && (
         <ModalSelecionarColaborador
           nomes={todosColaboradoresKing}
           onSelecionar={(nome) =>
-            atualizarFuncaoAtiva({ colaboradorSelecionado: nome, mostrarSeletor: false, metricasManuais: [] })
+            setKing((prev) => ({ ...prev, colaboradorSelecionado: nome, mostrarSeletor: false, metricasManuais: [] }))
           }
         />
       )}

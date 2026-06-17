@@ -45,17 +45,19 @@ export default function FormularioMetricasIndividuais({
       </p>
 
       <div className="mt-4 flex flex-col gap-3">
-        <select
-          value={colaborador}
-          onChange={(evento) => setColaborador(evento.target.value)}
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-black"
-        >
-          {colaboradoresDisponiveis.map((nome) => (
-            <option key={nome} value={nome}>
-              {nome}
-            </option>
-          ))}
-        </select>
+        {colaboradoresDisponiveis.length > 1 && (
+          <select
+            value={colaborador}
+            onChange={(evento) => setColaborador(evento.target.value)}
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-black"
+          >
+            {colaboradoresDisponiveis.map((nome) => (
+              <option key={nome} value={nome}>
+                {nome}
+              </option>
+            ))}
+          </select>
+        )}
 
         <select
           value={metrica}

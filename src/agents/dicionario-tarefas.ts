@@ -176,10 +176,22 @@ export const FONTES_POR_ROTULO: Record<string, string[]> = Object.fromEntries(
   ].map((def) => [def.rotulo, def.compromissos])
 )
 
-// Métricas derivadas (calculadas por fórmula, não por contagem direta).
+// Métricas derivadas (calculadas por fórmula) e métricas da Planilha King.
 export const EXPLICACOES_POR_ROTULO: Record<string, string> = {
+  // Derivadas — Tarefas
   'Taxa de Cancelamento Reuniões (%)':
     'Fórmula: Reuniões remarcadas/canceladas ÷ (total de reuniões realizadas + remarcadas) × 100',
   'Taxa de Conversão Ops (%)':
     'Fórmula: Fechamentos de Ops no Mês ÷ total de oportunidades abertas × 100',
+  // Métricas da Planilha King — coluna de origem entre parênteses
+  'Nº Churns Registrados':
+    'Total de registros (linhas) da Planilha King para o colaborador selecionado.',
+  'RRM Churn Nominal (R$)':
+    'Soma de todos os valores da coluna "Valor da assinatura".',
+  'Life Time Médio dos Churns (meses)':
+    'Média da coluna "Lifetime": soma dos meses de todos os churns ÷ quantidade de linhas.',
+  'LTV Médio Perdido por Churn (R$)':
+    'Média da coluna "LTV": soma do LTV de todos os churns ÷ quantidade de linhas.',
+  'Churns pós 7º Pagamento — LTV (R$)':
+    'Soma do LTV apenas dos churns com Lifetime ≥ 7 meses (≈ 7 pagamentos mensais).',
 }
