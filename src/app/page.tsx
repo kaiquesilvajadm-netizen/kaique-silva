@@ -14,7 +14,7 @@ import { colaboradorAutorizado, normalizarNomeColaborador } from '@/agents/colab
 import type { LinhaPlanilha, MetricaIndividual } from '@/types/metricas'
 
 const FUNCOES = [
-  { id: 'king', label: 'KING', icone: '⛏️', titulo: 'King', badge: 'Métricas · Planilha King (Churn)' },
+  { id: 'king', label: 'KING', icone: '🔑', titulo: 'King', badge: 'Métricas · Planilha King (Churn)' },
   { id: 'tarefas', label: 'TAREFAS', icone: '📊', titulo: 'Tarefas', badge: 'Métricas · Planilha de Tarefas' },
 ] as const
 
@@ -133,6 +133,23 @@ export default function Home() {
               </span>
             </div>
             <hr className="border-slate-200" />
+
+            {/* Instrução de uso */}
+            <div className="mt-4 flex gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                ?
+              </div>
+              <div className="text-xs leading-relaxed text-blue-800">
+                <span className="font-semibold">Como preparar a planilha antes de importar:</span>
+                {' '}abra a Planilha King no Google Sheets ou Excel, selecione tudo{' '}
+                <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + A</kbd>,
+                {' '}copie{' '}
+                <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + C</kbd>
+                {' '}e cole em uma planilha em branco <strong>sem formatação</strong>{' '}
+                <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + Shift + V</kbd>.
+                {' '}Isso remove links e células mescladas que impedem a leitura correta dos dados.
+              </div>
+            </div>
 
             {king.colaboradorSelecionado && (
               <div className="mt-5 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
