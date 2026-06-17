@@ -6,12 +6,16 @@ import {
   METRICAS_OPORTUNIDADE,
   METRICA_FECHAMENTOS,
   METRICAS_CHURN_VIA_TAREFAS,
+  FONTES_POR_ROTULO,
+  EXPLICACOES_POR_ROTULO,
 } from './dicionario-tarefas'
 
 export interface ValorMetrica {
   rotulo: string
   icone: string
   valor: number
+  fontes?: string[]
+  explicacao?: string
 }
 
 export interface LinhaDashboard {
@@ -72,6 +76,8 @@ export function montarRelatorio(metricas: MetricaIndividual[]): LinhaDashboard[]
       rotulo,
       icone: iconeDaMetrica(rotulo),
       valor,
+      fontes: FONTES_POR_ROTULO[rotulo],
+      explicacao: EXPLICACOES_POR_ROTULO[rotulo],
     })),
   }))
 }

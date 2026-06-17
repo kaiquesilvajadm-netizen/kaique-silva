@@ -12,7 +12,7 @@ interface Props {
 
 export default function Cabecalho({ funcaoAtiva, funcoes, onMudarFuncao }: Props) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-slate-900 px-6 py-4">
+    <header className="relative z-40 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-slate-900 px-6 py-4">
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-lg font-bold text-white">ADVBOX</span>
         <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-300">

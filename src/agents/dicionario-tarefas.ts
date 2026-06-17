@@ -162,3 +162,24 @@ export const METRICAS_CHURN_VIA_TAREFAS: DefinicaoMetricaContagem[] = [
 export const ROTULOS_PERMITEM_MANUAL_TAREFAS: string[] = [METRICA_FECHAMENTOS].filter(
   (definicao) => definicao.permiteManual
 ).map((definicao) => definicao.rotulo)
+
+// Mapa rotulo → lista de nomes de tarefa (Compromisso) que entram na contagem.
+// Exibido no tooltip "?" de cada métrica no dashboard.
+export const FONTES_POR_ROTULO: Record<string, string[]> = Object.fromEntries(
+  [
+    ...METRICAS_REUNIAO,
+    METRICA_REMARCADAS,
+    METRICA_REVISOES_DE_CONTAS,
+    ...METRICAS_OPORTUNIDADE,
+    METRICA_FECHAMENTOS,
+    ...METRICAS_CHURN_VIA_TAREFAS,
+  ].map((def) => [def.rotulo, def.compromissos])
+)
+
+// Métricas derivadas (calculadas por fórmula, não por contagem direta).
+export const EXPLICACOES_POR_ROTULO: Record<string, string> = {
+  'Taxa de Cancelamento Reuniões (%)':
+    'Fórmula: Reuniões remarcadas/canceladas ÷ (total de reuniões realizadas + remarcadas) × 100',
+  'Taxa de Conversão Ops (%)':
+    'Fórmula: Fechamentos de Ops no Mês ÷ total de oportunidades abertas × 100',
+}
