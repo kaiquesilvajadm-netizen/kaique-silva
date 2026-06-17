@@ -240,8 +240,8 @@ export default function Home() {
                 <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + A</kbd>,
                 {' '}copie{' '}
                 <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + C</kbd>
-                {' '}e cole em uma planilha em branco <strong>sem formatação</strong>{' '}
-                <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + Shift + V</kbd>.
+                {' '}e cole em uma planilha em branco{' '}
+                <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + V</kbd>.
               </div>
             </div>
 
