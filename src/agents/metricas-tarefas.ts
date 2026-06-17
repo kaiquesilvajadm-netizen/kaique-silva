@@ -3,7 +3,9 @@ import { normalizarTexto, valorDaColuna } from './util-linhas'
 import {
   METRICAS_REUNIAO,
   METRICA_REMARCADAS,
+  METRICA_AGENDAMENTOS_TENTADOS,
   METRICA_REVISOES_DE_CONTAS,
+  METRICA_OUTRAS_REUNIOES_CULTIVACAO,
   METRICAS_OPORTUNIDADE,
   METRICA_FECHAMENTOS,
   METRICAS_CHURN_VIA_TAREFAS,
@@ -31,17 +33,14 @@ function calcularParaGrupo(linhas: LinhaPlanilha[], modo: 'mensal' | 'semanal'):
 
   // Reuniões (SEMANAL)
   for (const def of METRICAS_REUNIAO) v[def.rotulo] = contar(def)
-  const totalReunioes = somarRotulos(v, METRICAS_REUNIAO)
 
   const remarcadas = contar(METRICA_REMARCADAS)
   v[METRICA_REMARCADAS.rotulo] = remarcadas
-
-  const totalAgendado = totalReunioes + remarcadas
-  v['Taxa de Cancelamento Reuniões (%)'] =
-    totalAgendado > 0 ? (remarcadas / totalAgendado) * 100 : 0
+  v[METRICA_AGENDAMENTOS_TENTADOS.rotulo] = contar(METRICA_AGENDAMENTOS_TENTADOS)
 
   // Métricas MENSAL
   v[METRICA_REVISOES_DE_CONTAS.rotulo] = contar(METRICA_REVISOES_DE_CONTAS)
+  v[METRICA_OUTRAS_REUNIOES_CULTIVACAO.rotulo] = contar(METRICA_OUTRAS_REUNIOES_CULTIVACAO)
   for (const def of METRICAS_OPORTUNIDADE) v[def.rotulo] = contar(def)
   const totalOps = somarRotulos(v, METRICAS_OPORTUNIDADE)
   v[METRICA_FECHAMENTOS.rotulo] = contar(METRICA_FECHAMENTOS)

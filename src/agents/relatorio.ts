@@ -2,7 +2,9 @@ import type { MetricaIndividual } from '@/types/metricas'
 import {
   METRICAS_REUNIAO,
   METRICA_REMARCADAS,
+  METRICA_AGENDAMENTOS_TENTADOS,
   METRICA_REVISOES_DE_CONTAS,
+  METRICA_OUTRAS_REUNIOES_CULTIVACAO,
   METRICAS_OPORTUNIDADE,
   METRICA_FECHAMENTOS,
   METRICAS_CHURN_VIA_TAREFAS,
@@ -24,7 +26,6 @@ export interface LinhaDashboard {
 }
 
 const ICONES_DERIVADOS: Record<string, string> = {
-  'Taxa de Cancelamento Reuniões (%)': '📉',
   'Nº Churns Registrados': '📉',
   'RRM Churn Nominal (R$)': '💸',
   'Life Time Médio dos Churns (meses)': '⏳',
@@ -37,7 +38,9 @@ const ICONE_POR_ROTULO: Record<string, string> = {
     [
       ...METRICAS_REUNIAO,
       METRICA_REMARCADAS,
+      METRICA_AGENDAMENTOS_TENTADOS,
       METRICA_REVISOES_DE_CONTAS,
+      METRICA_OUTRAS_REUNIOES_CULTIVACAO,
       ...METRICAS_OPORTUNIDADE,
       METRICA_FECHAMENTOS,
       ...METRICAS_CHURN_VIA_TAREFAS,
@@ -84,6 +87,6 @@ export function montarRelatorio(metricas: MetricaIndividual[]): LinhaDashboard[]
 export function formatarValorMetrica(rotulo: string, valor: number): string {
   if (rotulo.includes('(%)')) return `${valor.toFixed(1)}%`
   if (rotulo.includes('(R$)')) return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-  if (rotulo.toLowerCase().includes('médio')) return valor.toFixed(1)
+  if (rotulo.toLowerCase().includes('médio')) return valor.toFixed(2)
   return String(Math.round(valor))
 }

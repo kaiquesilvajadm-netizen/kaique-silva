@@ -53,6 +53,12 @@ export const METRICA_REMARCADAS: DefinicaoMetricaContagem = {
   compromissos: ['CS REMARCAR REUNIAO CULTIVACAO'],
 }
 
+export const METRICA_AGENDAMENTOS_TENTADOS: DefinicaoMetricaContagem = {
+  rotulo: 'Agendamentos Tentados',
+  icone: '📅',
+  compromissos: ['AGENDAR REUNIAO CULTIVACAO'],
+}
+
 // TODO: a planilha de instruções diz "soma de todas as tarefas de reuniões
 // feitas E [estes itens]" para esta métrica, mas o nome dela ("Checklist SEM
 // reunião") sugere que reuniões não deveriam entrar na soma — parece ter
@@ -88,7 +94,7 @@ export const METRICAS_OPORTUNIDADE: DefinicaoMetricaContagem[] = [
     compromissos: ['OPORTUNIDADE BIG BOSS'],
   },
   {
-    rotulo: 'Ativações de IA (Justine/Dona/Flowter)',
+    rotulo: 'Oportunidade de IA (Justine/Dona/Flowter)',
     icone: '🤖',
     compromissos: [
       'OPORTUNIDADE JUSTINE',
@@ -100,7 +106,7 @@ export const METRICAS_OPORTUNIDADE: DefinicaoMetricaContagem[] = [
     ],
   },
   {
-    rotulo: 'Ativações de API (pagas)',
+    rotulo: 'Oportunidade de API (pagas)',
     icone: '🔌',
     compromissos: ['CS OPORTUNIDADE API'],
   },
@@ -108,6 +114,7 @@ export const METRICAS_OPORTUNIDADE: DefinicaoMetricaContagem[] = [
     rotulo: 'Eventos / Comunidade / Parceiros',
     icone: '🎉',
     compromissos: [
+      'OPORTUNIDADE PARA EVENTOS',
       'CS INDICAÇÃO ALAN HONJOYA',
       'CS INDICAÇÃO CRIS ADV10X',
       'CS INDICAÇÃO EURO JR',
@@ -119,6 +126,12 @@ export const METRICAS_OPORTUNIDADE: DefinicaoMetricaContagem[] = [
     ],
   },
 ]
+
+export const METRICA_OUTRAS_REUNIOES_CULTIVACAO: DefinicaoMetricaContagem = {
+  rotulo: 'Outras Reuniões de Cultivação',
+  icone: '🌱',
+  compromissos: ['CS REATIVAÇÃO BM', 'CS REATIVAÇÃO BJ'],
+}
 
 export const METRICA_FECHAMENTOS: DefinicaoMetricaContagem = {
   rotulo: 'Fechamentos de Ops no Mês',
@@ -154,7 +167,7 @@ export const METRICAS_CHURN_VIA_TAREFAS: DefinicaoMetricaContagem[] = [
 export const ROTULOS_SEMANAL = new Set<string>([
   ...METRICAS_REUNIAO.map((d) => d.rotulo),
   METRICA_REMARCADAS.rotulo,
-  'Taxa de Cancelamento Reuniões (%)',
+  METRICA_AGENDAMENTOS_TENTADOS.rotulo,
 ])
 
 // Mapa rotulo → lista de nomes de tarefa (Compromisso) que entram na contagem.
@@ -163,7 +176,9 @@ export const FONTES_POR_ROTULO: Record<string, string[]> = Object.fromEntries(
   [
     ...METRICAS_REUNIAO,
     METRICA_REMARCADAS,
+    METRICA_AGENDAMENTOS_TENTADOS,
     METRICA_REVISOES_DE_CONTAS,
+    METRICA_OUTRAS_REUNIOES_CULTIVACAO,
     ...METRICAS_OPORTUNIDADE,
     METRICA_FECHAMENTOS,
     ...METRICAS_CHURN_VIA_TAREFAS,
@@ -172,9 +187,6 @@ export const FONTES_POR_ROTULO: Record<string, string[]> = Object.fromEntries(
 
 // Métricas derivadas (calculadas por fórmula) e métricas da Planilha King.
 export const EXPLICACOES_POR_ROTULO: Record<string, string> = {
-  // Derivadas — Tarefas
-  'Taxa de Cancelamento Reuniões (%)':
-    'Fórmula: Reuniões remarcadas/canceladas ÷ (total de reuniões realizadas + remarcadas) × 100',
   // Métricas da Planilha King — coluna de origem entre parênteses
   'Nº Churns Registrados':
     'Total de registros (linhas) da Planilha King para o colaborador selecionado.',
