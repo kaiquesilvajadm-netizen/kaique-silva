@@ -9,28 +9,38 @@ import { importarPlanilha } from '@/agents/importacao'
 import { limparTabela } from '@/agents/limpeza'
 import { calcularMetricasTarefas, detectarPeriodoTarefas } from '@/agents/metricas-tarefas'
 import { calcularMetricasKing } from '@/agents/metricas-king'
+import { calcularMetricasKingCarteira } from '@/agents/metricas-king-carteira'
 import { montarRelatorio } from '@/agents/relatorio'
 import { colaboradorAutorizado, normalizarNomeColaborador } from '@/agents/colaboradores-autorizados'
 import type { LinhaPlanilha, MetricaIndividual } from '@/types/metricas'
 
 const FUNCOES = [
-  { id: 'king', label: 'KING', icone: '🔑', titulo: 'King', badge: 'Métricas · Planilha King (Churn)' },
-  { id: 'tarefas', label: 'TAREFAS', icone: '📊', titulo: 'Tarefas', badge: 'Métricas · Planilha de Tarefas' },
+  { id: 'churn', label: 'CHURN', icone: '🔑', titulo: 'Churn', badge: 'MÉTRICAS · PLANILHA CHURN' },
+  { id: 'king',  label: 'KING',  icone: '👑', titulo: 'King',  badge: 'MÉTRICAS · PLANILHA KING'  },
+  { id: 'tarefas', label: 'TAREFAS', icone: '📊', titulo: 'Tarefas', badge: 'MÉTRICAS · PLANILHA DE TAREFAS' },
 ] as const
 
 type FuncaoId = (typeof FUNCOES)[number]['id']
 type ModoTarefas = 'mensal' | 'semanal'
 
-// ── Estado KING ──────────────────────────────────────────────────────────────
-interface EstadoKing {
+// ── Estado CHURN ──────────────────────────────────────────────────────────────
+interface EstadoChurn {
   metricasDaPlanilha: MetricaIndividual[]
   colaboradorSelecionado: string | null
   mostrarSeletor: boolean
   erro: string | null
 }
-
-function kingVazio(): EstadoKing {
+function churnVazio(): EstadoChurn {
   return { metricasDaPlanilha: [], colaboradorSelecionado: null, mostrarSeletor: false, erro: null }
+}
+
+// ── Estado KING (Carteira) ────────────────────────────────────────────────────
+interface EstadoKing {
+  metricasDaPlanilha: MetricaIndividual[]
+  erro: string | null
+}
+function kingVazio(): EstadoKing {
+  return { metricasDaPlanilha: [], erro: null }
 }
 
 // ── Estado TAREFAS ────────────────────────────────────────────────────────────
@@ -40,47 +50,52 @@ interface EstadoTarefas {
   erro: string | null
   aviso: string | null
 }
-
 function tarefasVazio(): EstadoTarefas {
   return { metricasDaPlanilha: [], modo: 'mensal', erro: null, aviso: null }
 }
 
 export default function Home() {
-  const [funcaoAtiva, setFuncaoAtiva] = useState<FuncaoId>('king')
+  const [funcaoAtiva, setFuncaoAtiva] = useState<FuncaoId>('churn')
+  const [churn, setChurn] = useState<EstadoChurn>(churnVazio)
   const [king, setKing] = useState<EstadoKing>(kingVazio)
   const [tarefas, setTarefas] = useState<EstadoTarefas>(tarefasVazio)
   const [mostrarInfoModo, setMostrarInfoModo] = useState(false)
 
-  // Armazena as linhas brutas da última planilha de tarefas para reprocessar
-  // ao trocar de modo (MENSAL ↔ SEMANAL) sem precisar reenviar o arquivo.
   const linhasBrutasTarefas = useRef<LinhaPlanilha[]>([])
 
   const funcaoInfo = FUNCOES.find((f) => f.id === funcaoAtiva)!
-  const ehKing = funcaoAtiva === 'king'
+  const ehChurn   = funcaoAtiva === 'churn'
+  const ehKing    = funcaoAtiva === 'king'
+  const ehTarefas = funcaoAtiva === 'tarefas'
 
-  // ── Dashboard KING ──────────────────────────────────────────────────────────
-  const linhasKing = useMemo(() => {
-    const filtradas = king.colaboradorSelecionado
-      ? king.metricasDaPlanilha.filter((m) => m.colaborador === king.colaboradorSelecionado)
+  // ── Dashboard CHURN ─────────────────────────────────────────────────────────
+  const linhasChurn = useMemo(() => {
+    const filtradas = churn.colaboradorSelecionado
+      ? churn.metricasDaPlanilha.filter((m) => m.colaborador === churn.colaboradorSelecionado)
       : []
     return montarRelatorio(filtradas)
-  }, [king])
+  }, [churn])
 
-  const todosColaboradoresKing = useMemo(
-    () => [...new Set(king.metricasDaPlanilha.map((m) => m.colaborador))].sort(),
-    [king.metricasDaPlanilha]
+  const todosColaboradoresChurn = useMemo(
+    () => [...new Set(churn.metricasDaPlanilha.map((m) => m.colaborador))].sort(),
+    [churn.metricasDaPlanilha]
   )
+
+  // ── Dashboard KING ──────────────────────────────────────────────────────────
+  const linhasKing = useMemo(() => montarRelatorio(king.metricasDaPlanilha), [king])
 
   // ── Dashboard TAREFAS ───────────────────────────────────────────────────────
-  const linhasTarefas = useMemo(
-    () => montarRelatorio(tarefas.metricasDaPlanilha),
-    [tarefas]
-  )
+  const linhasTarefas = useMemo(() => montarRelatorio(tarefas.metricasDaPlanilha), [tarefas])
 
   // ── Processamento ───────────────────────────────────────────────────────────
-  async function processarArquivoKing(arquivo: File): Promise<MetricaIndividual[]> {
+  async function processarArquivoChurn(arquivo: File): Promise<MetricaIndividual[]> {
     const abas = await importarPlanilha(arquivo)
     return calcularMetricasKing(limparTabela(abas[0]?.matriz ?? [], 'ID da conta'))
+  }
+
+  async function processarArquivoKing(arquivo: File): Promise<MetricaIndividual[]> {
+    const abas = await importarPlanilha(arquivo)
+    return calcularMetricasKingCarteira(limparTabela(abas[0]?.matriz ?? [], 'ID da Conta'))
   }
 
   async function processarArquivoTarefas(arquivo: File): Promise<MetricaIndividual[]> {
@@ -90,8 +105,8 @@ export default function Home() {
     return calcularMetricasTarefas(linhas, tarefas.modo)
   }
 
-  function aoReceberKing(metricas: MetricaIndividual[]) {
-    setKing((prev) => ({
+  function aoReceberChurn(metricas: MetricaIndividual[]) {
+    setChurn((prev) => ({
       ...prev,
       metricasDaPlanilha: metricas
         .filter((m) => colaboradorAutorizado(m.colaborador))
@@ -100,6 +115,10 @@ export default function Home() {
       mostrarSeletor: true,
       erro: null,
     }))
+  }
+
+  function aoReceberKing(metricas: MetricaIndividual[]) {
+    setKing((prev) => ({ ...prev, metricasDaPlanilha: metricas, erro: null }))
   }
 
   function aoReceberTarefas(metricas: MetricaIndividual[]) {
@@ -127,8 +146,8 @@ export default function Home() {
           onMudarFuncao={(id) => setFuncaoAtiva(id as FuncaoId)}
         />
 
-        {/* ── ABA KING ─────────────────────────────────────────────────── */}
-        {ehKing && (
+        {/* ── ABA CHURN ────────────────────────────────────────────────── */}
+        {ehChurn && (
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-center gap-3 pb-4">
               <span className="text-xl">{funcaoInfo.icone}</span>
@@ -157,21 +176,74 @@ export default function Home() {
               </div>
             </div>
 
-            {king.colaboradorSelecionado && (
+            {churn.colaboradorSelecionado && (
               <div className="mt-5 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
                 <span className="text-slate-400">👤</span>
                 <span className="flex-1 text-sm font-medium text-slate-800">
-                  {king.colaboradorSelecionado}
+                  {churn.colaboradorSelecionado}
                 </span>
                 <button
                   type="button"
-                  onClick={() => setKing((prev) => ({ ...prev, mostrarSeletor: true }))}
+                  onClick={() => setChurn((prev) => ({ ...prev, mostrarSeletor: true }))}
                   className="rounded-full bg-white px-3 py-1 text-xs font-medium text-blue-600 shadow-sm ring-1 ring-slate-200 hover:bg-blue-50"
                 >
                   Trocar
                 </button>
               </div>
             )}
+
+            <div className="mt-6">
+              <UploadPlanilha
+                aoProcessar={processarArquivoChurn}
+                onResultado={aoReceberChurn}
+                onErro={(msg) => setChurn((prev) => ({ ...prev, erro: msg }))}
+              />
+            </div>
+
+            {churn.erro && (
+              <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{churn.erro}</p>
+            )}
+
+            {linhasChurn.length > 0 && (
+              <span className="mt-6 inline-block rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                📋 RELATÓRIO CHURN
+              </span>
+            )}
+            <div className="mt-4">
+              <DashboardMetricas linhas={linhasChurn} ocultarNome={false} />
+            </div>
+          </div>
+        )}
+
+        {/* ── ABA KING ─────────────────────────────────────────────────── */}
+        {ehKing && (
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3 pb-4">
+              <span className="text-xl">{funcaoInfo.icone}</span>
+              <h2 className="text-lg font-semibold text-slate-900">{funcaoInfo.titulo}</h2>
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+                {funcaoInfo.badge}
+              </span>
+            </div>
+            <hr className="border-slate-200" />
+
+            {/* Instrução de uso */}
+            <div className="mt-4 flex gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                ?
+              </div>
+              <div className="text-xs leading-relaxed text-blue-800">
+                <span className="font-semibold">Como exportar os dados corretamente:</span>
+                {' '}acesse a <strong>ADVBOX → King</strong>, remova o filtro <strong>Trial em Dia</strong>,
+                {' '}clique em <strong>Filtrar</strong>, selecione Status = <strong>Ativas</strong> e filtre pelo <strong>seu nome</strong>.
+                {' '}Clique em <strong>Mostrar Todos</strong>, selecione tudo{' '}
+                <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + A</kbd>,
+                {' '}copie{' '}
+                <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + C</kbd>
+                {' '}e cole em uma planilha em branco <strong>sem formatação</strong>{' '}
+                <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + Shift + V</kbd>.
+              </div>
+            </div>
 
             <div className="mt-6">
               <UploadPlanilha
@@ -191,13 +263,13 @@ export default function Home() {
               </span>
             )}
             <div className="mt-4">
-              <DashboardMetricas linhas={linhasKing} ocultarNome={false} />
+              <DashboardMetricas linhas={linhasKing} ocultarNome={true} />
             </div>
           </div>
         )}
 
         {/* ── ABA TAREFAS ──────────────────────────────────────────────── */}
-        {!ehKing && (
+        {ehTarefas && (
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
               <div className="flex flex-wrap items-center gap-3">
@@ -285,10 +357,7 @@ export default function Home() {
               </span>
             )}
             <div className="mt-4">
-              <DashboardMetricas
-                linhas={linhasTarefas}
-                ocultarNome={true}
-              />
+              <DashboardMetricas linhas={linhasTarefas} ocultarNome={true} />
             </div>
           </div>
         )}
@@ -298,12 +367,12 @@ export default function Home() {
         </footer>
       </div>
 
-      {/* Modal de seleção de colaborador — apenas na aba KING */}
-      {ehKing && king.mostrarSeletor && todosColaboradoresKing.length > 0 && (
+      {/* Modal de seleção de colaborador — apenas na aba CHURN */}
+      {ehChurn && churn.mostrarSeletor && todosColaboradoresChurn.length > 0 && (
         <ModalSelecionarColaborador
-          nomes={todosColaboradoresKing}
+          nomes={todosColaboradoresChurn}
           onSelecionar={(nome) =>
-            setKing((prev) => ({ ...prev, colaboradorSelecionado: nome, mostrarSeletor: false }))
+            setChurn((prev) => ({ ...prev, colaboradorSelecionado: nome, mostrarSeletor: false }))
           }
         />
       )}

@@ -27,6 +27,14 @@ export interface LinhaDashboard {
 
 const ICONES_DERIVADOS: Record<string, string> = {
   'Taxa de Efetivação de Reuniões (%)': '✅',
+  // King Carteira
+  'Nº Total de Contas na Carteira': '🏢',
+  'Contas Excellent': '🟢',
+  'Contas Good': '🔵',
+  'Contas Poor': '🟡',
+  'Contas Bad': '🔴',
+  'MRR Total da Carteira (R$)': '💰',
+  // Churn
   'Nº Churns Registrados': '📉',
   'RRM Churn Nominal (R$)': '💸',
   'Life Time Médio dos Churns (meses)': '⏳',

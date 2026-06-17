@@ -23,9 +23,12 @@ export function limparTabela(matriz: unknown[][], colunaAncora: string): LinhaPl
   }
 
   const cabecalho = matriz[indiceCabecalho]
+  const nomesVistos = new Map<string, number>()
   const colunas = cabecalho.map((celula, indice) => {
-    const nome = String(celula ?? '').trim()
-    return nome || `coluna_${indice + 1}`
+    const nome = String(celula ?? '').trim() || `coluna_${indice + 1}`
+    const contagem = nomesVistos.get(nome) ?? 0
+    nomesVistos.set(nome, contagem + 1)
+    return contagem === 0 ? nome : `${nome}_${contagem + 1}`
   })
 
   return matriz

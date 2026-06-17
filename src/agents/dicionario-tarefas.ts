@@ -191,7 +191,20 @@ export const EXPLICACOES_POR_ROTULO: Record<string, string> = {
   // Derivadas — Tarefas
   'Taxa de Efetivação de Reuniões (%)':
     'Fórmula: total de reuniões realizadas ÷ agendamentos tentados × 100. Mede quantos dos agendamentos tentados resultaram em reunião efetivamente realizada.',
-  // Métricas da Planilha King — coluna de origem entre parênteses
+  // Métricas da Planilha King (Carteira)
+  'Nº Total de Contas na Carteira':
+    'Quantidade de IDs únicos na coluna "ID da Conta" da planilha exportada.',
+  'Contas Excellent':
+    'Quantidade de contas com Health Score = Excellent na carteira.',
+  'Contas Good':
+    'Quantidade de contas com Health Score = Good na carteira.',
+  'Contas Poor':
+    'Quantidade de contas com Health Score = Poor na carteira.',
+  'Contas Bad':
+    'Quantidade de contas com Health Score = Bad na carteira.',
+  'MRR Total da Carteira (R$)':
+    'Soma de todos os valores da coluna "Assinatura" (receita recorrente mensal da carteira).',
+  // Métricas da Planilha Churn — coluna de origem entre parênteses
   'Nº Churns Registrados':
     'Total de registros (linhas) da Planilha King para o colaborador selecionado.',
   'RRM Churn Nominal (R$)':
