@@ -25,7 +25,6 @@ export interface LinhaDashboard {
 
 const ICONES_DERIVADOS: Record<string, string> = {
   'Taxa de Cancelamento Reuniões (%)': '📉',
-  'Taxa de Conversão Ops (%)': '🎯',
   'Nº Churns Registrados': '📉',
   'RRM Churn Nominal (R$)': '💸',
   'Life Time Médio dos Churns (meses)': '⏳',

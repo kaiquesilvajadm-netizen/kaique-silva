@@ -7,10 +7,6 @@ export interface DefinicaoMetricaContagem {
   rotulo: string
   icone: string
   compromissos: string[]
-  // Só true para a métrica que a planilha de instruções marca como
-  // aceitando ajuste manual ("DAR OPÇÃO DE INSERIR VALOR MANUAL"). O
-  // formulário de métricas individuais só oferece estas como opção.
-  permiteManual?: boolean
 }
 
 export const METRICAS_REUNIAO: DefinicaoMetricaContagem[] = [
@@ -124,12 +120,9 @@ export const METRICAS_OPORTUNIDADE: DefinicaoMetricaContagem[] = [
   },
 ]
 
-// "DAR OPÇÃO DE INSERIR VALOR MANUAL E SOMAR COM AS TAREFAS" — por isso o
-// formulário manual soma (em vez de sobrescrever) o que vier da planilha.
 export const METRICA_FECHAMENTOS: DefinicaoMetricaContagem = {
   rotulo: 'Fechamentos de Ops no Mês',
   icone: '💰',
-  permiteManual: true,
   compromissos: [
     'fechamento oportunidade pacote inteligente',
     'fechamento oportunidade Flowter',
@@ -164,13 +157,6 @@ export const ROTULOS_SEMANAL = new Set<string>([
   'Taxa de Cancelamento Reuniões (%)',
 ])
 
-// Rótulos das métricas que aceitam ajuste manual no menu Tarefas. Hoje a
-// planilha de instruções só marca "Fechamentos de Ops no Mês" — o menu King
-// não tem nenhuma métrica marcada para entrada manual.
-export const ROTULOS_PERMITEM_MANUAL_TAREFAS: string[] = [METRICA_FECHAMENTOS].filter(
-  (definicao) => definicao.permiteManual
-).map((definicao) => definicao.rotulo)
-
 // Mapa rotulo → lista de nomes de tarefa (Compromisso) que entram na contagem.
 // Exibido no tooltip "?" de cada métrica no dashboard.
 export const FONTES_POR_ROTULO: Record<string, string[]> = Object.fromEntries(
@@ -189,8 +175,6 @@ export const EXPLICACOES_POR_ROTULO: Record<string, string> = {
   // Derivadas — Tarefas
   'Taxa de Cancelamento Reuniões (%)':
     'Fórmula: Reuniões remarcadas/canceladas ÷ (total de reuniões realizadas + remarcadas) × 100',
-  'Taxa de Conversão Ops (%)':
-    'Fórmula: Fechamentos de Ops no Mês ÷ total de oportunidades abertas × 100',
   // Métricas da Planilha King — coluna de origem entre parênteses
   'Nº Churns Registrados':
     'Total de registros (linhas) da Planilha King para o colaborador selecionado.',

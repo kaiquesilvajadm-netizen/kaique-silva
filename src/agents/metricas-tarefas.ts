@@ -45,8 +45,6 @@ function calcularParaGrupo(linhas: LinhaPlanilha[], modo: 'mensal' | 'semanal'):
   for (const def of METRICAS_OPORTUNIDADE) v[def.rotulo] = contar(def)
   const totalOps = somarRotulos(v, METRICAS_OPORTUNIDADE)
   v[METRICA_FECHAMENTOS.rotulo] = contar(METRICA_FECHAMENTOS)
-  v['Taxa de Conversão Ops (%)'] =
-    totalOps > 0 ? (v[METRICA_FECHAMENTOS.rotulo] / totalOps) * 100 : 0
   for (const def of METRICAS_CHURN_VIA_TAREFAS) v[def.rotulo] = contar(def)
 
   const valores =

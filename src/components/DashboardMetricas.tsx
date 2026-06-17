@@ -43,7 +43,7 @@ export default function DashboardMetricas({ linhas, ocultarNome = false }: Props
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {linha.metricas.map((metrica) => {
               const chave = `${linha.colaborador}:${metrica.rotulo}`
               const aberto = tooltipAberto === chave
@@ -51,7 +51,7 @@ export default function DashboardMetricas({ linhas, ocultarNome = false }: Props
                 (metrica.fontes && metrica.fontes.length > 0) || !!metrica.explicacao
 
               return (
-                <div key={metrica.rotulo} className="relative">
+                <div key={metrica.rotulo} className="relative min-w-0">
                   <div className="h-full rounded-lg bg-white px-4 py-3 shadow-sm">
                     <div className="flex items-start gap-1">
                       <span className="mt-0.5 text-xs">{metrica.icone}</span>

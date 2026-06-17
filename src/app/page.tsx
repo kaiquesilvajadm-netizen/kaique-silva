@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState } from 'react'
 import Cabecalho from '@/components/Cabecalho'
 import UploadPlanilha from '@/components/UploadPlanilha'
-import FormularioMetricasIndividuais from '@/components/FormularioMetricasIndividuais'
 import DashboardMetricas from '@/components/DashboardMetricas'
 import ModalSelecionarColaborador from '@/components/ModalSelecionarColaborador'
 import { importarPlanilha } from '@/agents/importacao'
@@ -11,7 +10,6 @@ import { limparTabela } from '@/agents/limpeza'
 import { calcularMetricasTarefas } from '@/agents/metricas-tarefas'
 import { calcularMetricasKing } from '@/agents/metricas-king'
 import { montarRelatorio } from '@/agents/relatorio'
-import { ROTULOS_PERMITEM_MANUAL_TAREFAS } from '@/agents/dicionario-tarefas'
 import { colaboradorAutorizado, normalizarNomeColaborador } from '@/agents/colaboradores-autorizados'
 import type { LinhaPlanilha, MetricaIndividual } from '@/types/metricas'
 
@@ -26,26 +24,24 @@ type ModoTarefas = 'mensal' | 'semanal'
 // ── Estado KING ──────────────────────────────────────────────────────────────
 interface EstadoKing {
   metricasDaPlanilha: MetricaIndividual[]
-  metricasManuais: MetricaIndividual[]
   colaboradorSelecionado: string | null
   mostrarSeletor: boolean
   erro: string | null
 }
 
 function kingVazio(): EstadoKing {
-  return { metricasDaPlanilha: [], metricasManuais: [], colaboradorSelecionado: null, mostrarSeletor: false, erro: null }
+  return { metricasDaPlanilha: [], colaboradorSelecionado: null, mostrarSeletor: false, erro: null }
 }
 
 // ── Estado TAREFAS ────────────────────────────────────────────────────────────
 interface EstadoTarefas {
   metricasDaPlanilha: MetricaIndividual[]
-  metricasManuais: MetricaIndividual[]
   modo: ModoTarefas
   erro: string | null
 }
 
 function tarefasVazio(): EstadoTarefas {
-  return { metricasDaPlanilha: [], metricasManuais: [], modo: 'mensal', erro: null }
+  return { metricasDaPlanilha: [], modo: 'mensal', erro: null }
 }
 
 export default function Home() {
@@ -65,7 +61,7 @@ export default function Home() {
     const filtradas = king.colaboradorSelecionado
       ? king.metricasDaPlanilha.filter((m) => m.colaborador === king.colaboradorSelecionado)
       : []
-    return montarRelatorio([...filtradas, ...king.metricasManuais])
+    return montarRelatorio(filtradas)
   }, [king])
 
   const todosColaboradoresKing = useMemo(
@@ -75,11 +71,9 @@ export default function Home() {
 
   // ── Dashboard TAREFAS ───────────────────────────────────────────────────────
   const linhasTarefas = useMemo(
-    () => montarRelatorio([...tarefas.metricasDaPlanilha, ...tarefas.metricasManuais]),
+    () => montarRelatorio(tarefas.metricasDaPlanilha),
     [tarefas]
   )
-
-  const colaboradoresTarefas = linhasTarefas.map((l) => l.colaborador)
 
   // ── Processamento ───────────────────────────────────────────────────────────
   async function processarArquivoKing(arquivo: File): Promise<MetricaIndividual[]> {
@@ -101,14 +95,13 @@ export default function Home() {
         .filter((m) => colaboradorAutorizado(m.colaborador))
         .map((m) => ({ ...m, colaborador: normalizarNomeColaborador(m.colaborador) })),
       colaboradorSelecionado: null,
-      metricasManuais: [],
       mostrarSeletor: true,
       erro: null,
     }))
   }
 
   function aoReceberTarefas(metricas: MetricaIndividual[]) {
-    setTarefas((prev) => ({ ...prev, metricasDaPlanilha: metricas, metricasManuais: [], erro: null }))
+    setTarefas((prev) => ({ ...prev, metricasDaPlanilha: metricas, erro: null }))
   }
 
   function mudarModoTarefas(novoModo: ModoTarefas) {
@@ -116,7 +109,6 @@ export default function Home() {
     setTarefas((prev) => ({
       ...prev,
       modo: novoModo,
-      metricasManuais: [],
       metricasDaPlanilha: linhas.length > 0 ? calcularMetricasTarefas(linhas, novoModo) : [],
     }))
   }
@@ -213,19 +205,11 @@ export default function Home() {
             </div>
             <hr className="border-slate-200" />
 
-            <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            <div className="mt-6">
               <UploadPlanilha
                 aoProcessar={processarArquivoTarefas}
                 onResultado={aoReceberTarefas}
                 onErro={(msg) => setTarefas((prev) => ({ ...prev, erro: msg }))}
-              />
-              <FormularioMetricasIndividuais
-                key={colaboradoresTarefas.join(',')}
-                colaboradoresDisponiveis={colaboradoresTarefas}
-                metricasPermitidas={ROTULOS_PERMITEM_MANUAL_TAREFAS}
-                onAdicionar={(m) =>
-                  setTarefas((prev) => ({ ...prev, metricasManuais: [...prev.metricasManuais, m] }))
-                }
               />
             </div>
 
@@ -257,7 +241,7 @@ export default function Home() {
         <ModalSelecionarColaborador
           nomes={todosColaboradoresKing}
           onSelecionar={(nome) =>
-            setKing((prev) => ({ ...prev, colaboradorSelecionado: nome, mostrarSeletor: false, metricasManuais: [] }))
+            setKing((prev) => ({ ...prev, colaboradorSelecionado: nome, mostrarSeletor: false }))
           }
         />
       )}
