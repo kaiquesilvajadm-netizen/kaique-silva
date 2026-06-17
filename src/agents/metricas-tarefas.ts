@@ -33,10 +33,14 @@ function calcularParaGrupo(linhas: LinhaPlanilha[], modo: 'mensal' | 'semanal'):
 
   // Reuniões (SEMANAL)
   for (const def of METRICAS_REUNIAO) v[def.rotulo] = contar(def)
+  const totalReunioes = somarRotulos(v, METRICAS_REUNIAO)
 
   const remarcadas = contar(METRICA_REMARCADAS)
   v[METRICA_REMARCADAS.rotulo] = remarcadas
-  v[METRICA_AGENDAMENTOS_TENTADOS.rotulo] = contar(METRICA_AGENDAMENTOS_TENTADOS)
+  const agendamentos = contar(METRICA_AGENDAMENTOS_TENTADOS)
+  v[METRICA_AGENDAMENTOS_TENTADOS.rotulo] = agendamentos
+  v['Taxa de Efetivação de Reuniões (%)'] =
+    agendamentos > 0 ? (totalReunioes / agendamentos) * 100 : 0
 
   // Métricas MENSAL
   v[METRICA_REVISOES_DE_CONTAS.rotulo] = contar(METRICA_REVISOES_DE_CONTAS)
