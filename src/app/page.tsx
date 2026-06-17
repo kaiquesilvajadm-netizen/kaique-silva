@@ -241,7 +241,7 @@ export default function Home() {
             <div className="mt-4">
               <DashboardMetricas
                 linhas={linhasTarefas}
-                ocultarNome={tarefas.modo === 'mensal'}
+                ocultarNome={true}
               />
             </div>
           </div>

@@ -156,6 +156,14 @@ export const METRICAS_CHURN_VIA_TAREFAS: DefinicaoMetricaContagem[] = [
   },
 ]
 
+// Métricas marcadas como SEMANAL na coluna FREQUENCIA da planilha de instruções.
+// O toggle Semanal exibe SOMENTE estas; o toggle Mensal exibe todas.
+export const ROTULOS_SEMANAL = new Set<string>([
+  ...METRICAS_REUNIAO.map((d) => d.rotulo),
+  METRICA_REMARCADAS.rotulo,
+  'Taxa de Cancelamento Reuniões (%)',
+])
+
 // Rótulos das métricas que aceitam ajuste manual no menu Tarefas. Hoje a
 // planilha de instruções só marca "Fechamentos de Ops no Mês" — o menu King
 // não tem nenhuma métrica marcada para entrada manual.
