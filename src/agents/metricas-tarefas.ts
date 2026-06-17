@@ -13,7 +13,7 @@ export function detectarPeriodoTarefas(
   const timestamps: number[] = []
   for (const linha of linhas) {
     for (const [coluna, valor] of Object.entries(linha)) {
-      if (!normalizarTexto(coluna).includes('data')) continue
+      if (normalizarTexto(coluna) !== 'data') continue
       const ts = parsearData(valor)
       if (ts !== null) timestamps.push(ts)
     }
