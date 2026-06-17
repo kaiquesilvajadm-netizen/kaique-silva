@@ -248,13 +248,13 @@ export default function Home() {
                   <p>
                     <span className="font-semibold">Mensal:</span>{' '}
                     Exibe todas as métricas do mês — reuniões, oportunidades, revisões e churn.
-                    É necessário emitir o relatório do mês inteiro na ADVBOX.
+                    Exige o relatório do mês completo (22 a 30 dias úteis) emitido na ADVBOX.
                   </p>
                   <p>
                     <span className="font-semibold">Semanal:</span>{' '}
                     Exibe apenas métricas de frequência semanal — reuniões realizadas, remarcadas/canceladas,
                     agendamentos tentados e taxa de efetivação.
-                    É necessário emitir o relatório semanal na ADVBOX.
+                    Exige o relatório semanal (5 a 7 dias úteis) emitido na ADVBOX.
                   </p>
                 </div>
               </div>

@@ -24,11 +24,13 @@ export function detectarPeriodoTarefas(
   const max = Math.max(...timestamps)
   const dias = (max - min) / (1000 * 60 * 60 * 24)
 
-  if (modo === 'semanal' && dias > 10) {
-    return `⚠️ A planilha inserida parece cobrir ${Math.round(dias)} dias. O modo Semanal espera um relatório de até 7 dias — verifique se exportou o período correto na ADVBOX.`
+  // Semanal: 5–7 dias úteis → amplitude de calendário ≤ 7 dias
+  // Mensal:  22–30 dias úteis → amplitude de calendário entre ~20 e 30 dias
+  if (modo === 'semanal' && dias > 7) {
+    return `⚠️ A planilha inserida parece cobrir ${Math.round(dias)} dias. O modo Semanal espera um relatório de 5 a 7 dias úteis — verifique se exportou o período semanal correto na ADVBOX.`
   }
-  if (modo === 'mensal' && dias > 0 && dias < 8) {
-    return `⚠️ A planilha inserida parece cobrir apenas ${Math.round(dias)} dias. O modo Mensal espera o relatório do mês completo — verifique se exportou o período correto na ADVBOX.`
+  if (modo === 'mensal' && dias > 0 && dias < 15) {
+    return `⚠️ A planilha inserida parece cobrir apenas ${Math.round(dias)} dias. O modo Mensal espera um relatório com 22 a 30 dias úteis (mês completo) — verifique se exportou o período correto na ADVBOX.`
   }
   return null
 }
