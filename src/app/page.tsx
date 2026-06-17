@@ -140,14 +140,15 @@ export default function Home() {
                 ?
               </div>
               <div className="text-xs leading-relaxed text-blue-800">
-                <span className="font-semibold">Como preparar a planilha antes de importar:</span>
-                {' '}abra a Planilha King no Google Sheets ou Excel, selecione tudo{' '}
+                <span className="font-semibold">Como exportar os dados corretamente:</span>
+                {' '}acesse a <strong>ADVBOX → King → Churns</strong>, selecione o período desejado e abra a planilha gerada.
+                {' '}Selecione tudo{' '}
                 <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + A</kbd>,
                 {' '}copie{' '}
                 <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + C</kbd>
                 {' '}e cole em uma planilha em branco <strong>sem formatação</strong>{' '}
                 <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + Shift + V</kbd>.
-                {' '}Isso remove links e células mescladas que impedem a leitura correta dos dados.
+                {' '}Colar sem formatação remove links e células mescladas, garantindo que o sistema leia todos os dados corretamente.
               </div>
             </div>
 
