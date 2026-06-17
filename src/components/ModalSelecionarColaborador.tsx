@@ -37,7 +37,7 @@ export default function ModalSelecionarColaborador({ nomes, onSelecionar }: Prop
               <button
                 type="button"
                 onClick={() => onSelecionar(nome)}
-                className="w-full px-4 py-3 text-left text-sm text-slate-800 transition-colors hover:bg-blue-50 hover:text-blue-700 active:bg-blue-100"
+                className="w-full px-4 py-3 text-left text-sm font-medium text-black transition-colors hover:bg-blue-50 hover:text-blue-700 active:bg-blue-100"
               >
                 {nome}
               </button>

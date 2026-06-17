@@ -48,7 +48,7 @@ export default function FormularioMetricasIndividuais({
         <select
           value={colaborador}
           onChange={(evento) => setColaborador(evento.target.value)}
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-black"
         >
           {colaboradoresDisponiveis.map((nome) => (
             <option key={nome} value={nome}>
@@ -60,7 +60,7 @@ export default function FormularioMetricasIndividuais({
         <select
           value={metrica}
           onChange={(evento) => setMetrica(evento.target.value)}
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-black"
         >
           {metricasPermitidas.map((rotulo) => (
             <option key={rotulo} value={rotulo}>
@@ -73,7 +73,7 @@ export default function FormularioMetricasIndividuais({
           value={valor}
           onChange={(evento) => setValor(evento.target.value)}
           placeholder="Valor a somar"
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-black"
         />
 
         <button

@@ -17,9 +17,14 @@ export const COLABORADORES_AUTORIZADOS = [
   'THAÍS AMADEU PESSIM',
 ] as const
 
-// Remove prefixos como "(FÉRIAS) " antes de comparar com a lista acima.
+// Remove prefixos como "(FÉRIAS) " do nome — usado tanto na comparação
+// quanto na normalização para exibição no dashboard.
+export function normalizarNomeColaborador(nome: string): string {
+  return nome.replace(/^\([^)]+\)\s*/u, '').trim()
+}
+
 function nomeBase(nome: string): string {
-  return nome.replace(/^\([^)]+\)\s*/u, '').trim().toLowerCase()
+  return normalizarNomeColaborador(nome).toLowerCase()
 }
 
 const autorizadosNormalizados = COLABORADORES_AUTORIZADOS.map((n) => n.toLowerCase())

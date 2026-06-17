@@ -12,7 +12,7 @@ import { calcularMetricasTarefas } from '@/agents/metricas-tarefas'
 import { calcularMetricasKing } from '@/agents/metricas-king'
 import { montarRelatorio } from '@/agents/relatorio'
 import { ROTULOS_PERMITEM_MANUAL_TAREFAS } from '@/agents/dicionario-tarefas'
-import { colaboradorAutorizado } from '@/agents/colaboradores-autorizados'
+import { colaboradorAutorizado, normalizarNomeColaborador } from '@/agents/colaboradores-autorizados'
 import type { MetricaIndividual } from '@/types/metricas'
 
 const FUNCOES = [
@@ -101,7 +101,9 @@ export default function Home() {
     if (ehKing) {
       // Filtra pela lista de autorizados e abre o modal de seleção
       atualizarFuncaoAtiva({
-        metricasDaPlanilha: metricas.filter((m) => colaboradorAutorizado(m.colaborador)),
+        metricasDaPlanilha: metricas
+          .filter((m) => colaboradorAutorizado(m.colaborador))
+          .map((m) => ({ ...m, colaborador: normalizarNomeColaborador(m.colaborador) })),
         colaboradorSelecionado: null,
         metricasManuais: [],
         mostrarSeletor: true,
@@ -184,8 +186,7 @@ export default function Home() {
         </div>
 
         <footer className="text-center text-xs text-slate-400">
-          <p>ADVBOX · Painel de métricas - CULTIVAÇÃO</p>
-          <p>Desenvolvido por: Time de Configuração</p>
+          <p>ADVBOX · PAINEL DE MÉTRICAS - CULTIVAÇÃO</p>
         </footer>
       </div>
 

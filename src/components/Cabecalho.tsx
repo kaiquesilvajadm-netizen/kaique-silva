@@ -15,9 +15,6 @@ export default function Cabecalho({ funcaoAtiva, funcoes, onMudarFuncao }: Props
     <header className="relative z-40 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-slate-900 px-6 py-4">
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-lg font-bold text-white">ADVBOX</span>
-        <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-300">
-          Analytics
-        </span>
         <span className="text-xs tracking-wide text-slate-400">
           PAINEL GERENCIAL · MÉTRICAS CULTIVAÇÃO
         </span>
