@@ -43,7 +43,7 @@ export default function DashboardMetricas({ linhas, ocultarNome = false }: Props
             </div>
           )}
 
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
             {linha.metricas.map((metrica) => {
               const chave = `${linha.colaborador}:${metrica.rotulo}`
               const aberto = tooltipAberto === chave
@@ -51,7 +51,7 @@ export default function DashboardMetricas({ linhas, ocultarNome = false }: Props
                 (metrica.fontes && metrica.fontes.length > 0) || !!metrica.explicacao
 
               return (
-                <div key={metrica.rotulo} className="relative min-w-[170px] flex-1">
+                <div key={metrica.rotulo} className="relative">
                   <div className="h-full rounded-lg bg-white px-4 py-3 shadow-sm">
                     <div className="flex items-start gap-1">
                       <span className="mt-0.5 text-xs">{metrica.icone}</span>
@@ -91,21 +91,21 @@ export default function DashboardMetricas({ linhas, ocultarNome = false }: Props
                       </div>
 
                       {metrica.explicacao && (
-                        <p className="mb-3 rounded bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-800">
+                        <p className="mb-3 rounded bg-blue-50 px-3 py-2 text-xs uppercase leading-relaxed text-blue-800">
                           {metrica.explicacao}
                         </p>
                       )}
 
                       {metrica.fontes && metrica.fontes.length > 0 && (
                         <>
-                          <p className="mb-1.5 text-xs font-medium text-slate-500">
+                          <p className="mb-1.5 text-xs font-medium uppercase text-slate-500">
                             Tarefas contabilizadas:
                           </p>
                           <ul className="space-y-1">
                             {metrica.fontes.map((fonte) => (
                               <li
                                 key={fonte}
-                                className="rounded bg-slate-50 px-2 py-1 text-xs text-slate-700"
+                                className="rounded bg-slate-50 px-2 py-1 text-xs uppercase text-slate-700"
                               >
                                 {fonte}
                               </li>
