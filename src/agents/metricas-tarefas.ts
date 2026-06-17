@@ -88,7 +88,9 @@ function calcularParaGrupo(linhas: LinhaPlanilha[], modo: 'mensal' | 'semanal'):
 
   // Reuniões (SEMANAL)
   for (const def of METRICAS_REUNIAO) v[def.rotulo] = contar(def)
-  const totalReunioes = somarRotulos(v, METRICAS_REUNIAO)
+  const outrasReunioes = contar(METRICA_OUTRAS_REUNIOES_CULTIVACAO)
+  v[METRICA_OUTRAS_REUNIOES_CULTIVACAO.rotulo] = outrasReunioes
+  const totalReunioes = somarRotulos(v, METRICAS_REUNIAO) + outrasReunioes
 
   const remarcadas = contar(METRICA_REMARCADAS)
   v[METRICA_REMARCADAS.rotulo] = remarcadas
@@ -99,7 +101,6 @@ function calcularParaGrupo(linhas: LinhaPlanilha[], modo: 'mensal' | 'semanal'):
 
   // Métricas MENSAL
   v[METRICA_REVISOES_DE_CONTAS.rotulo] = contar(METRICA_REVISOES_DE_CONTAS)
-  v[METRICA_OUTRAS_REUNIOES_CULTIVACAO.rotulo] = contar(METRICA_OUTRAS_REUNIOES_CULTIVACAO)
   for (const def of METRICAS_OPORTUNIDADE) v[def.rotulo] = contar(def)
   const totalOps = somarRotulos(v, METRICAS_OPORTUNIDADE)
   v[METRICA_FECHAMENTOS.rotulo] = contar(METRICA_FECHAMENTOS)

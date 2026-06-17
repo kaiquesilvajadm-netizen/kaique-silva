@@ -168,6 +168,7 @@ export const ROTULOS_SEMANAL = new Set<string>([
   ...METRICAS_REUNIAO.map((d) => d.rotulo),
   METRICA_REMARCADAS.rotulo,
   METRICA_AGENDAMENTOS_TENTADOS.rotulo,
+  METRICA_OUTRAS_REUNIOES_CULTIVACAO.rotulo,
   'Taxa de Efetivação de Reuniões (%)',
 ])
 
