@@ -1,5 +1,58 @@
 import type { LinhaPlanilha, MetricaIndividual } from '@/types/metricas'
 import { normalizarTexto, valorDaColuna } from './util-linhas'
+
+// ── Detecção de período ───────────────────────────────────────────────────────
+// Verifica se o arquivo inserido bate com o modo selecionado (mensal/semanal),
+// lendo colunas de data da planilha e calculando a amplitude em dias.
+export function detectarPeriodoTarefas(
+  linhas: LinhaPlanilha[],
+  modo: 'mensal' | 'semanal'
+): string | null {
+  if (linhas.length < 2) return null
+
+  const timestamps: number[] = []
+  for (const linha of linhas) {
+    for (const [coluna, valor] of Object.entries(linha)) {
+      if (!normalizarTexto(coluna).includes('data')) continue
+      const ts = parsearData(valor)
+      if (ts !== null) timestamps.push(ts)
+    }
+  }
+  if (timestamps.length < 2) return null
+
+  const min = Math.min(...timestamps)
+  const max = Math.max(...timestamps)
+  const dias = (max - min) / (1000 * 60 * 60 * 24)
+
+  if (modo === 'semanal' && dias > 10) {
+    return `⚠️ A planilha inserida parece cobrir ${Math.round(dias)} dias. O modo Semanal espera um relatório de até 7 dias — verifique se exportou o período correto na ADVBOX.`
+  }
+  if (modo === 'mensal' && dias > 0 && dias < 8) {
+    return `⚠️ A planilha inserida parece cobrir apenas ${Math.round(dias)} dias. O modo Mensal espera o relatório do mês completo — verifique se exportou o período correto na ADVBOX.`
+  }
+  return null
+}
+
+function parsearData(valor: unknown): number | null {
+  // Excel serial date — intervalo ~2020-2028 (seriais 43831-47483)
+  if (typeof valor === 'number' && valor > 43831 && valor < 47483) {
+    return (valor - 25569) * 86400 * 1000
+  }
+  if (valor instanceof Date) return isNaN(valor.getTime()) ? null : valor.getTime()
+  if (typeof valor === 'string') {
+    const ptBR = valor.match(/^(\d{2})\/(\d{2})\/(\d{4})/)
+    if (ptBR) {
+      const ts = new Date(`${ptBR[3]}-${ptBR[2]}-${ptBR[1]}`).getTime()
+      return isNaN(ts) ? null : ts
+    }
+    const iso = valor.match(/^\d{4}-\d{2}-\d{2}/)
+    if (iso) {
+      const ts = new Date(valor.slice(0, 10)).getTime()
+      return isNaN(ts) ? null : ts
+    }
+  }
+  return null
+}
 import {
   METRICAS_REUNIAO,
   METRICA_REMARCADAS,

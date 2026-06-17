@@ -7,7 +7,7 @@ import DashboardMetricas from '@/components/DashboardMetricas'
 import ModalSelecionarColaborador from '@/components/ModalSelecionarColaborador'
 import { importarPlanilha } from '@/agents/importacao'
 import { limparTabela } from '@/agents/limpeza'
-import { calcularMetricasTarefas } from '@/agents/metricas-tarefas'
+import { calcularMetricasTarefas, detectarPeriodoTarefas } from '@/agents/metricas-tarefas'
 import { calcularMetricasKing } from '@/agents/metricas-king'
 import { montarRelatorio } from '@/agents/relatorio'
 import { colaboradorAutorizado, normalizarNomeColaborador } from '@/agents/colaboradores-autorizados'
@@ -38,16 +38,18 @@ interface EstadoTarefas {
   metricasDaPlanilha: MetricaIndividual[]
   modo: ModoTarefas
   erro: string | null
+  aviso: string | null
 }
 
 function tarefasVazio(): EstadoTarefas {
-  return { metricasDaPlanilha: [], modo: 'mensal', erro: null }
+  return { metricasDaPlanilha: [], modo: 'mensal', erro: null, aviso: null }
 }
 
 export default function Home() {
   const [funcaoAtiva, setFuncaoAtiva] = useState<FuncaoId>('king')
   const [king, setKing] = useState<EstadoKing>(kingVazio)
   const [tarefas, setTarefas] = useState<EstadoTarefas>(tarefasVazio)
+  const [mostrarInfoModo, setMostrarInfoModo] = useState(false)
 
   // Armazena as linhas brutas da última planilha de tarefas para reprocessar
   // ao trocar de modo (MENSAL ↔ SEMANAL) sem precisar reenviar o arquivo.
@@ -101,15 +103,18 @@ export default function Home() {
   }
 
   function aoReceberTarefas(metricas: MetricaIndividual[]) {
-    setTarefas((prev) => ({ ...prev, metricasDaPlanilha: metricas, erro: null }))
+    const aviso = detectarPeriodoTarefas(linhasBrutasTarefas.current, tarefas.modo)
+    setTarefas((prev) => ({ ...prev, metricasDaPlanilha: metricas, erro: null, aviso }))
   }
 
   function mudarModoTarefas(novoModo: ModoTarefas) {
     const linhas = linhasBrutasTarefas.current
+    const aviso = linhas.length > 0 ? detectarPeriodoTarefas(linhas, novoModo) : null
     setTarefas((prev) => ({
       ...prev,
       modo: novoModo,
       metricasDaPlanilha: linhas.length > 0 ? calcularMetricasTarefas(linhas, novoModo) : [],
+      aviso,
     }))
   }
 
@@ -141,7 +146,7 @@ export default function Home() {
               </div>
               <div className="text-xs leading-relaxed text-blue-800">
                 <span className="font-semibold">Como exportar os dados corretamente:</span>
-                {' '}acesse a <strong>ADVBOX → King → Churns</strong>, selecione o período desejado e abra a planilha gerada.
+                {' '}acesse a <strong>ADVBOX → King → Churns</strong> e selecione o período desejado.
                 {' '}Selecione tudo{' '}
                 <kbd className="rounded bg-blue-100 px-1 py-0.5 font-mono font-semibold">Ctrl + A</kbd>,
                 {' '}copie{' '}
@@ -204,24 +209,63 @@ export default function Home() {
               </div>
 
               {/* Toggle MENSAL / SEMANAL */}
-              <div className="flex gap-1 rounded-full bg-slate-100 p-1">
-                {(['mensal', 'semanal'] as ModoTarefas[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => mudarModoTarefas(m)}
-                    className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-                      tarefas.modo === m
-                        ? 'bg-slate-900 text-white'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    {m === 'mensal' ? 'Mensal' : 'Semanal'}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1 rounded-full bg-slate-100 p-1">
+                  {(['mensal', 'semanal'] as ModoTarefas[]).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => mudarModoTarefas(m)}
+                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                        tarefas.modo === m
+                          ? 'bg-slate-900 text-white'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      {m === 'mensal' ? 'Mensal' : 'Semanal'}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMostrarInfoModo((v) => !v)}
+                  className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-500 hover:bg-blue-100 hover:text-blue-700"
+                  aria-label="Sobre os modos Mensal e Semanal"
+                >
+                  ?
+                </button>
               </div>
             </div>
             <hr className="border-slate-200" />
+
+            {/* Info dos modos */}
+            {mostrarInfoModo && (
+              <div className="mt-4 flex gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                  ?
+                </div>
+                <div className="space-y-2 text-xs leading-relaxed text-blue-800">
+                  <p>
+                    <span className="font-semibold">Mensal:</span>{' '}
+                    Exibe todas as métricas do mês — reuniões, oportunidades, revisões e churn.
+                    É necessário emitir o relatório do mês inteiro na ADVBOX.
+                  </p>
+                  <p>
+                    <span className="font-semibold">Semanal:</span>{' '}
+                    Exibe apenas métricas de frequência semanal — reuniões realizadas, remarcadas/canceladas,
+                    agendamentos tentados e taxa de efetivação.
+                    É necessário emitir o relatório semanal na ADVBOX.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Aviso de planilha incompatível com o modo */}
+            {tarefas.aviso && (
+              <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                {tarefas.aviso}
+              </div>
+            )}
 
             <div className="mt-6">
               <UploadPlanilha
