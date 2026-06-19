@@ -38,6 +38,10 @@ export const METRICAS_REUNIAO: DefinicaoMetricaContagem[] = [
       'CSA REUNIÃO DONN@ E JUSTIN-E',
       'CSA REUNIÃO AGENTE DE PETICIONAMENTO',
       'CSA REUNIÃO FLOWTERS + API',
+      'CS REUNIÃO AUTOMAÇÕES E API',
+      'CS REUNIÃO DE ADOÇÃO PACK INTELIGENTE',
+      'CS REUNIÃO DE AJUSTES TÉCNICOS INTERNOS',
+      'CS REUNIÃO OFFBOARDING DE CLIENTES',
     ],
   },
   {
@@ -56,7 +60,11 @@ export const METRICA_REMARCADAS: DefinicaoMetricaContagem = {
 export const METRICA_AGENDAMENTOS_TENTADOS: DefinicaoMetricaContagem = {
   rotulo: 'Agendamentos Tentados',
   icone: '📅',
-  compromissos: ['AGENDAR REUNIAO CULTIVACAO'],
+  compromissos: [
+    'AGENDAR REUNIAO CULTIVACAO',
+    'AGENDAR REUNIÃO PACOTE INTELIGENTE',
+    'AGENDAR REUNIÃO CONSULTORIA',
+  ],
 }
 
 // TODO: a planilha de instruções diz "soma de todas as tarefas de reuniões
